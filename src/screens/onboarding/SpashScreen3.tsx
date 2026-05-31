@@ -1,178 +1,238 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Animated,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { MaterialIcons } from "@expo/vector-icons";
-import Svg, {
-  Circle,
-  Defs,
-  Stop,
-  G,
-  LinearGradient as SvgGradient,
-} from "react-native-svg";
-import { useDispatch } from "react-redux";
-import { completeOnboarding } from "../../features/auth/authSlice";
+  Dimensions,
+  Easing,
+  InteractionManager,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useDispatch } from 'react-redux';
+import { completeOnboarding } from '../../features/auth/authSlice';
 
+const { width } = Dimensions.get('window');
 const RADIUS = 42;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const ENTRY_DURATION = 1250;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function SplashScreen3() {
   const dispatch = useDispatch();
-  const progress = useRef(new Animated.Value(CIRCUMFERENCE)).current;
-  const [offset, setOffset] = useState(CIRCUMFERENCE);
+  const [isReady, setIsReady] = useState(false);
+  const entryAnim = useRef(new Animated.Value(0)).current;
+  const strokeOffset = useRef(new Animated.Value(CIRCUMFERENCE)).current;
+  const chipFloatAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const listener = progress.addListener(({ value }) => {
-      setOffset(value);
+    let chipLoop: Animated.CompositeAnimation | undefined;
+    let chipTimer: ReturnType<typeof setTimeout> | undefined;
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      setIsReady(true);
+
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.timing(entryAnim, {
+            toValue: 1,
+            duration: ENTRY_DURATION,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.delay(360),
+            Animated.timing(strokeOffset, {
+              toValue: CIRCUMFERENCE * 0.25,
+              duration: 2300,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: false,
+            }),
+          ]),
+        ]).start();
+
+        chipLoop = Animated.loop(
+          Animated.sequence([
+            Animated.timing(chipFloatAnim, {
+              toValue: -6,
+              duration: 2000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(chipFloatAnim, {
+              toValue: 0,
+              duration: 2000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        chipTimer = setTimeout(() => chipLoop?.start(), 650);
+      });
     });
 
-    const timer = setTimeout(() => {
-      Animated.timing(progress, {
-        toValue: 66,
-        duration: 1500,
-        useNativeDriver: false,
-      }).start();
-    }, 300);
-
-  // Mẹo: Sửa lỗi dùng sai "strokeWidth" là string dạng số ("4"). Bản chất nó nhận dạng Double, đổi thành số thuần {4} hoặc 4.
-
     return () => {
-      clearTimeout(timer);
-      progress.removeListener(listener);
+      interactionTask.cancel();
+      if (chipTimer) {
+        clearTimeout(chipTimer);
+      }
+      chipLoop?.stop();
+      entryAnim.stopAnimation();
+      strokeOffset.stopAnimation();
+      chipFloatAnim.stopAnimation();
     };
-  }, []);
+  }, [chipFloatAnim, entryAnim, strokeOffset]);
+
+  const headerEntryStyle = {
+    opacity: entryAnim.interpolate({
+      inputRange: [0, 0.45, 1],
+      outputRange: [0, 0, 1],
+    }),
+  };
+
+  const heroEntryStyle = {
+    opacity: entryAnim.interpolate({
+      inputRange: [0, 0.55, 1],
+      outputRange: [0, 0.85, 1],
+    }),
+    transform: [
+      {
+        translateY: entryAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [76, 0],
+        }),
+      },
+      {
+        scale: entryAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.94, 1],
+        }),
+      },
+    ],
+  };
+
+  const bottomEntryStyle = {
+    opacity: entryAnim.interpolate({
+      inputRange: [0, 0.35, 1],
+      outputRange: [0, 0, 1],
+    }),
+    transform: [
+      {
+        translateY: entryAnim.interpolate({
+          inputRange: [0, 0.35, 1],
+          outputRange: [60, 60, 0],
+        }),
+      },
+    ],
+  };
 
   return (
     <View style={styles.container}>
-      {/* Background Glows */}
-      <View style={styles.glowTopLeft} />
-      <View style={styles.glowBottomRight} />
+      <View style={[styles.glowLeft, { backgroundColor: 'rgba(160, 120, 255, 0.1)' }]} />
+      <View style={[styles.glowRight, { backgroundColor: 'rgba(5, 102, 217, 0.1)' }]} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity>
-          <Text style={styles.skip}>SKIP</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        {isReady && (
+        <Animated.View style={[styles.header, headerEntryStyle]}>
+          <TouchableOpacity accessibilityRole="button">
+            <Text style={styles.skipText}>SKIP</Text>
+          </TouchableOpacity>
+        </Animated.View>
+        )}
 
-      {/* Hero */}
-      <View style={styles.hero}>
-        <View style={styles.glassCard}>
-          {/* Neon glow overlay */}
-          <View style={styles.cardGlow} />
+        {isReady && (
+        <Animated.View style={[styles.centerCanvas, heroEntryStyle]}>
+          <View style={styles.glassCard}>
+            <View style={styles.ringContainer}>
+              <Svg width="100%" height="100%" viewBox="0 0 100 100" style={styles.svgRotate}>
+                <Defs>
+                  <SvgGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor="#a078ff" />
+                    <Stop offset="100%" stopColor="#0566d9" />
+                  </SvgGradient>
+                </Defs>
 
-          {/* Progress Ring */}
-          <View style={styles.ringContainer}>
-            <Svg
-              width={192}
-              height={192}
-              viewBox="0 0 100 100"
-              style={styles.ringDropShadow}
-            >
-              <Defs>
-                <SvgGradient
-                  id="progressGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <Stop offset="0%" stopColor="#a078ff" />
-                  <Stop offset="100%" stopColor="#0566d9" />
-                </SvgGradient>
-              </Defs>
-
-              {/* Track */}
-              <Circle
-                cx="50"
-                cy="50"
-                r={RADIUS}
-                stroke="#494454"
-                strokeWidth={4}
-                fill="transparent"
-                opacity={0.5}
-              />
-
-              {/* Animated Progress */}
-              <G rotation={-90} originX={50} originY={50}>
                 <Circle
                   cx="50"
                   cy="50"
                   r={RADIUS}
-                  stroke="url(#progressGradient)"
-                  strokeWidth={4}
                   fill="transparent"
-                  strokeLinecap="round"
-                  strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={offset}
+                  stroke="rgba(45, 52, 73, 0.5)"
+                  strokeWidth={4}
                 />
-              </G>
-            </Svg>
 
-            {/* Center Icon */}
-            <View style={styles.iconWrapper}>
-              <MaterialIcons name="auto-awesome" size={32} color="#d0bcff" />
+                <AnimatedCircle
+                  cx="50"
+                  cy="50"
+                  r={RADIUS}
+                  fill="transparent"
+                  stroke="url(#progress-gradient)"
+                  strokeWidth={4}
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={strokeOffset as any}
+                  strokeLinecap="round"
+                />
+              </Svg>
+
+              <View style={styles.iconCenterWrapper}>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons name="auto-awesome" size={32} color="#d0bcff" />
+                </View>
+              </View>
             </View>
+
+            <Animated.View style={[styles.streakChip, { transform: [{ translateY: chipFloatAnim }] }]}>
+              <View style={styles.fireIconContainer}>
+                <MaterialIcons name="local-fire-department" size={16} color="#ffb4ab" />
+              </View>
+              <View style={styles.streakTextContainer}>
+                <Text style={styles.streakLabel}>CURRENT STREAK</Text>
+                <Text style={styles.streakValue}>14</Text>
+              </View>
+            </Animated.View>
+          </View>
+        </Animated.View>
+        )}
+
+        {isReady && (
+        <Animated.View style={[styles.bottomSection, bottomEntryStyle]}>
+          <View style={styles.typography}>
+            <Text style={styles.displayTitle}>Track with Precision</Text>
+            <Text style={styles.bodyDescription}>
+              Consistency made beautiful. Track your daily rituals with intuitive gestures.
+            </Text>
           </View>
 
-          {/* Streak Chip */}
-          <View style={styles.streakChip}>
-            <View style={styles.fireCircle}>
-              <MaterialIcons
-                name="local-fire-department"
-                size={16}
-                color="#ffb4ab"
-              />
-            </View>
-            <View>
-              <Text style={styles.streakLabel}>CURRENT STREAK</Text>
-              <Text style={styles.streakValue}>14</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Bottom */}
-      <View style={styles.bottom}>
-        {/* Text */}
-        <View style={styles.textBlock}>
-          <Text style={styles.title}>Track with Precision</Text>
-          <Text style={styles.description}>
-            Consistency made beautiful. Track your daily rituals with intuitive
-            gestures.
-          </Text>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => dispatch(completeOnboarding())}
-          >
-            <LinearGradient
-              colors={["#a078ff", "#0566d9"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.button}
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.buttonWrapper}
+              onPress={() => dispatch(completeOnboarding())}
             >
-              <Text style={styles.buttonText}>Next</Text>
-              <MaterialIcons name="arrow-forward" size={20} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={['#a078ff', '#0566d9']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientButton}
+              >
+                <Text style={styles.buttonText}>Next</Text>
+                <MaterialIcons name="arrow-forward" size={20} color="#ffffff" />
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {/* Dots */}
-          <View style={styles.dots}>
-            <View style={styles.activeDot} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
+            <View style={styles.dotContainer}>
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+              <View style={[styles.dot, styles.activeDot]} />
+            </View>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+        )}
+      </SafeAreaView>
     </View>
   );
 }
@@ -180,185 +240,210 @@ export default function SplashScreen3() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0b1326",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
+    backgroundColor: '#0b1326',
   },
-
-  // Background glows
-  glowTopLeft: {
-    position: "absolute",
-    top: -120,
-    left: -120,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "#a078ff",
-    opacity: 0.1,
+  glowLeft: {
+    position: 'absolute',
+    top: '-10%',
+    left: '-10%',
+    width: width * 1.2,
+    height: width * 1.2,
+    borderRadius: (width * 1.2) / 2,
+    opacity: 0.6,
   },
-  glowBottomRight: {
-    position: "absolute",
-    bottom: -100,
-    right: -100,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: "#0566d9",
-    opacity: 0.1,
+  glowRight: {
+    position: 'absolute',
+    bottom: '-10%',
+    right: '-10%',
+    width,
+    height: width,
+    borderRadius: width / 2,
+    opacity: 0.6,
   },
-
-  // Header
-  header: {
-    alignItems: "flex-end",
-  },
-  skip: {
-    color: "#cbc3d7",
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 1,
-  },
-
-  // Hero glass card
-  hero: {
+  safeArea: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'space-between',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  skipText: {
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#cbc3d7',
+    letterSpacing: 1.5,
+  },
+  centerCanvas: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
   },
   glassCard: {
+    position: 'relative',
     width: 280,
     height: 280,
-    borderRadius: 24,
-    backgroundColor: "rgba(11,19,38,0.70)",
+    backgroundColor: 'rgba(11, 19, 38, 0.7)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardGlow: {
-    ...StyleSheet.absoluteFillObject,
     borderRadius: 24,
-    shadowColor: "#d0bcff",
-    shadowOpacity: 0.15,
-    shadowRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 32,
+    elevation: 10,
   },
-
-  // Ring
   ringContainer: {
-    justifyContent: "center",
-    alignItems: "center",
+    width: 192,
+    height: 192,
+    position: 'relative',
   },
-  ringDropShadow: {
-    // drop-shadow approximated via card glow
+  svgRotate: {
+    transform: [{ rotate: '-90deg' }],
   },
-  iconWrapper: {
-    position: "absolute",
+  iconCenterWrapper: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(49,57,77,0.5)",
+    backgroundColor: 'rgba(49, 57, 77, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
-    justifyContent: "center",
-    alignItems: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  // Streak chip
   streakChip: {
-    position: "absolute",
-    bottom: -24,
-    right: -8,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(49,57,77,0.85)",
-    borderRadius: 999,
+    position: 'absolute',
+    bottom: -16,
+    right: 0,
+    backgroundColor: 'rgba(49, 57, 77, 0.8)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderRadius: 999,
     paddingLeft: 12,
     paddingRight: 16,
     paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  fireCircle: {
+  fireIconContainer: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "rgba(147,0,10,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(147, 0, 10, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 6,
   },
+  streakTextContainer: {
+    flexDirection: 'column',
+  },
   streakLabel: {
-    color: "#cbc3d7",
-    fontSize: 10,
-    fontWeight: "600",
+    fontFamily: 'System',
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#cbc3d7',
     letterSpacing: 1,
   },
   streakValue: {
-    color: "#dae2fd",
+    fontFamily: 'System',
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '600',
+    color: '#dae2fd',
+    marginTop: 2,
   },
-
-  // Bottom section
-  bottom: {
-    paddingBottom: 8,
+  bottomSection: {
+    paddingBottom: 24,
+    paddingHorizontal: 24,
   },
-  textBlock: {
-    alignItems: "center",
+  typography: {
+    alignItems: 'center',
     marginBottom: 40,
-    paddingHorizontal: 8,
   },
-  title: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#ffffff",
-    textAlign: "center",
-    marginBottom: 12,
+  displayTitle: {
+    fontFamily: 'System',
+    fontSize: 40,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 16,
   },
-  description: {
+  bodyDescription: {
+    fontFamily: 'System',
     fontSize: 16,
     lineHeight: 24,
-    color: "#cbc3d7",
-    textAlign: "center",
+    color: '#cbc3d7',
+    textAlign: 'center',
   },
-
-  // Actions
-  actions: {
-    // replaces gap:24 with marginTop on dots
+  actionContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
-  button: {
-    height: 56,
+  buttonWrapper: {
+    width: '100%',
     borderRadius: 12,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: 'hidden',
+    marginBottom: 24,
+    shadowColor: '#a078ff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  gradientButton: {
+    width: '100%',
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: "#fff",
+    fontFamily: 'System',
     fontSize: 14,
-    fontWeight: "700",
-    marginRight: 8,  // replaces gap
+    fontWeight: '600',
+    color: '#ffffff',
+    marginRight: 8,
   },
-
-  // Dots
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  activeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#d0bcff",
-    marginHorizontal: 5,
+  dotContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 16,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#494454",
+    backgroundColor: '#2d3449',
     marginHorizontal: 5,
+  },
+  activeDot: {
+    backgroundColor: '#d0bcff',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    shadowColor: '#ecddff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
   },
 });

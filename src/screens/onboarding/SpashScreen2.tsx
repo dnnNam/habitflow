@@ -1,24 +1,127 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Animated,
+  Easing,
+  InteractionManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
+const ENTRY_DURATION = 1250;
 
-type SplashScreen2NavigationProp = StackNavigationProp<OnboardingStackParamList, 'SplashScreen2'>;
+type SplashScreen2NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'SplashScreen2'>;
 
 export default function SplashScreen2() {
   const navigation = useNavigation<SplashScreen2NavigationProp>();
+  const [isReady, setIsReady] = useState(false);
+  const entryAnim = useRef(new Animated.Value(0)).current;
+  const badgeFloatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let badgeLoop: Animated.CompositeAnimation | undefined;
+    let badgeTimer: ReturnType<typeof setTimeout> | undefined;
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      setIsReady(true);
+
+      requestAnimationFrame(() => {
+        Animated.timing(entryAnim, {
+          toValue: 1,
+          duration: ENTRY_DURATION,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }).start();
+
+        badgeLoop = Animated.loop(
+          Animated.sequence([
+            Animated.timing(badgeFloatAnim, {
+              toValue: -6,
+              duration: 1800,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(badgeFloatAnim, {
+              toValue: 0,
+              duration: 1800,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        badgeTimer = setTimeout(() => badgeLoop?.start(), 500);
+      });
+    });
+
+    return () => {
+      interactionTask.cancel();
+      if (badgeTimer) {
+        clearTimeout(badgeTimer);
+      }
+      badgeLoop?.stop();
+      entryAnim.stopAnimation();
+      badgeFloatAnim.stopAnimation();
+    };
+  }, [entryAnim, badgeFloatAnim]);
+
+  const cardEntryStyle = {
+    opacity: entryAnim.interpolate({
+      inputRange: [0, 0.55, 1],
+      outputRange: [0, 0.8, 1],
+    }),
+    transform: [
+      {
+        translateY: entryAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [72, 0],
+        }),
+      },
+      {
+        scale: entryAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.94, 1],
+        }),
+      },
+    ],
+  };
+
+  const textEntryStyle = {
+    opacity: entryAnim.interpolate({
+      inputRange: [0, 0.28, 1],
+      outputRange: [0, 0, 1],
+    }),
+    transform: [
+      {
+        translateY: entryAnim.interpolate({
+          inputRange: [0, 0.28, 1],
+          outputRange: [56, 56, 0],
+        }),
+      },
+    ],
+  };
+
+  const controlsEntryStyle = {
+    opacity: entryAnim.interpolate({
+      inputRange: [0, 0.45, 1],
+      outputRange: [0, 0, 1],
+    }),
+    transform: [
+      {
+        translateY: entryAnim.interpolate({
+          inputRange: [0, 0.45, 1],
+          outputRange: [48, 48, 0],
+        }),
+      },
+    ],
+  };
 
   const handleNext = () => {
     navigation.navigate('SplashScreen3');
@@ -36,13 +139,14 @@ export default function SplashScreen2() {
         <View style={styles.flexSpacer1} />
 
         {/* Visual Analytics Card (Glassmorphism) */}
-        <View style={styles.cardContainer}>
+        {isReady && (
+        <Animated.View style={[styles.cardContainer, cardEntryStyle]}>
           
           {/* Floating Decorative Element (+42%) */}
-          <View style={styles.floatingBadge}>
+          <Animated.View style={[styles.floatingBadge, { transform: [{ translateY: badgeFloatAnim }] }]}>
             <MaterialIcons name="trending-up" size={14} color="#4edea3" />
             <Text style={styles.badgeText}>+42%</Text>
-          </View>
+          </Animated.View>
 
           {/* The Glass Container */}
           <View style={styles.glassCard}>
@@ -97,21 +201,25 @@ export default function SplashScreen2() {
               <Text style={styles.xAxisText}>Sun</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
+        )}
 
         {/* Copy Content */}
-        <View style={styles.textContent}>
+        {isReady && (
+        <Animated.View style={[styles.textContent, textEntryStyle]}>
           <Text style={styles.title}>Insights that inspire.</Text>
           <Text style={styles.description}>
             See your progress through stunning visualizations and AI-driven recommendations.
           </Text>
-        </View>
+        </Animated.View>
+        )}
 
         {/* Spacer */}
         <View style={styles.flexSpacer2} />
 
         {/* Controls (Bottom) */}
-        <View style={styles.controls}>
+        {isReady && (
+        <Animated.View style={[styles.controls, controlsEntryStyle]}>
           {/* Navigation Dots */}
           <View style={styles.dotsContainer}>
             <View style={styles.dot} />
@@ -131,7 +239,8 @@ export default function SplashScreen2() {
               <MaterialIcons name="arrow-forward" size={18} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
+        )}
 
       </View>
     </View>

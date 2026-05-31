@@ -10,10 +10,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
-type GamificationNavigationProp = StackNavigationProp<OnboardingStackParamList, 'Gamification'>;
+type GamificationNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'Gamification'>;
 
 export default function Gamification() {
   const navigation = useNavigation<GamificationNavigationProp>();

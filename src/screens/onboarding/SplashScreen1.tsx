@@ -9,24 +9,28 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { OnboardingStackParamList } from "../../navigation/OnboardingNavigator";
 
 const { width } = Dimensions.get("window");
 
-type SplashScreen1NavigationProp = StackNavigationProp<OnboardingStackParamList, "SplashScreen1">;
+type SplashScreen1NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "SplashScreen1">;
 
 export default function SplashScreen1() {
   const navigation = useNavigation<SplashScreen1NavigationProp>();
   const floatAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef<any>(null);
 
   const handleNext = () => {
+    if (animationRef.current) {
+      animationRef.current.stop();
+    }
     navigation.navigate("SplashScreen2");
   };
 
   useEffect(() => {
-    Animated.loop(
+    const floatSequence = Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
           toValue: -12,
@@ -39,13 +43,22 @@ export default function SplashScreen1() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    
+    animationRef.current = floatSequence;
+    floatSequence.start();
 
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1200,
       useNativeDriver: true,
     }).start();
+
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
+    };
   }, []);
 
   return (
@@ -73,7 +86,7 @@ export default function SplashScreen1() {
 
         {/* Glass Card */}
         <View style={styles.glassCard}>
-          <Text style={styles.logoText}>H</Text>
+          <Text style={styles.wavySymbol}>~</Text>
         </View>
       </Animated.View>
 
@@ -153,6 +166,12 @@ const styles = StyleSheet.create({
     fontSize: 64,
     fontWeight: "800",
     color: "#d0bcff",
+  },
+
+  wavySymbol: {
+    fontSize: 80,
+    color: "#d0bcff",
+    fontWeight: "300",
   },
 
   footer: {
