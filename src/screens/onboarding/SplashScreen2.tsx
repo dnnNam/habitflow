@@ -253,7 +253,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b1326',
   },
   
-  // Ambient Glows
   glowTopLeft: {
     position: 'absolute',
     top: '-10%',
@@ -288,7 +287,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
 
-  // Chart Card Container
   cardContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -371,7 +369,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Content
   textContent: {
     alignItems: 'center',
     marginBottom: 32,
@@ -397,7 +394,6 @@ const styles = StyleSheet.create({
     flexGrow: 2,
   },
 
-  // Bottom Controls
   controls: {
     width: '100%',
     paddingBottom: 16,
@@ -424,7 +420,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#d0bcff',
     marginHorizontal: 4,
-    // Hiệu ứng đổ bóng nhẹ cho active dot giống CSS shadow
     shadowColor: '#d0bcff',
     shadowOpacity: 0.5,
     shadowRadius: 4,
@@ -438,7 +433,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    // Đổ bóng nút bấm
     shadowColor: '#a078ff',
     shadowOpacity: 0.25,
     shadowRadius: 10,
