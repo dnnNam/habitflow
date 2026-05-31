@@ -173,7 +173,7 @@ export default function SplashScreen3() {
                   stroke="url(#progress-gradient)"
                   strokeWidth={4}
                   strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={strokeOffset as any}
+                  strokeDashoffset={strokeOffset}
                   strokeLinecap="round"
                 />
               </Svg>

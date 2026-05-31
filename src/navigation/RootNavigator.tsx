@@ -1,13 +1,12 @@
-import React from 'react'
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '../app/hooks';
 import { selectHasSeenOnboarding, selectIsLoggedIn } from '../features/auth/authSelector';
 import OnboardingNavigator from './OnboardingNavigator';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 
 export default function RootNavigator() {
-    const hasSeenOnboarding =  useSelector(selectHasSeenOnboarding);
-    const isLoggedIn = useSelector(selectIsLoggedIn);
+    const hasSeenOnboarding = useAppSelector(selectHasSeenOnboarding);
+    const isLoggedIn = useAppSelector(selectIsLoggedIn);
 
     if(!hasSeenOnboarding) {
         return  <OnboardingNavigator/>

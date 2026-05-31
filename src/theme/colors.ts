@@ -1,0 +1,32 @@
+export const colors = {
+  background: '#0b1326',
+  surface: '#0b1326',
+  surfaceContainerLowest: '#060e20',
+  surfaceContainerLow: '#131b2e',
+  surfaceContainer: '#171f33',
+  surfaceContainerHigh: '#222a3d',
+  surfaceContainerHighest: '#2d3449',
+  surfaceBright: '#31394d',
+  onSurface: '#dae2fd',
+  onSurfaceVariant: '#cbc3d7',
+  outline: '#958ea0',
+  outlineVariant: '#494454',
+  primary: '#d0bcff',
+  primaryContainer: '#a078ff',
+  primaryFixed: '#e9ddff',
+  inversePrimary: '#6d3bd7',
+  secondary: '#adc6ff',
+  secondaryContainer: '#0566d9',
+  tertiary: '#4edea3',
+  tertiaryContainer: '#00a572',
+  error: '#ffb4ab',
+  errorContainer: '#93000a',
+  white: '#ffffff',
+  black: '#000000',
+} as const;
+
+export const gradients = {
+  primary: [colors.primaryContainer, colors.secondaryContainer] as const,
+  softPrimary: [colors.inversePrimary, colors.primaryContainer] as const,
+  text: [colors.primary, colors.secondary] as const,
+} as const;
