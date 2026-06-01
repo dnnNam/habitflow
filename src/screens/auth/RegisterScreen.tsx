@@ -12,6 +12,8 @@ import { clearAuthError, fetchProfile, register } from '../../features/auth/auth
 import { selectAuthError, selectAuthIsLoading } from '../../features/auth/authSelector';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, fontSizes, fontWeights, spacing } from '../../theme';
+import { hasValidationErrors, validateRegisterForm } from '../../utils/authValidation';
+import type { RegisterValidationErrors } from '../../utils/authValidation';
 
 type RegisterNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -23,8 +25,16 @@ export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [validationErrors, setValidationErrors] = useState<RegisterValidationErrors>({});
 
   const handleCreateAccount = async () => {
+    const nextValidationErrors = validateRegisterForm({ fullName, email, password });
+    setValidationErrors(nextValidationErrors);
+
+    if (hasValidationErrors(nextValidationErrors)) {
+      return;
+    }
+
     const result = await dispatch(register({
       fullName: fullName.trim(),
       email: email.trim(),
@@ -41,7 +51,25 @@ export default function RegisterScreen() {
     navigation.navigate('Login');
   };
 
-  const canSubmit = fullName.trim().length > 0 && email.trim().length > 0 && password.length > 0 && !isLoading;
+  const handleFullNameChange = (nextFullName: string) => {
+    setFullName(nextFullName);
+    setValidationErrors((current) => ({ ...current, fullName: undefined }));
+    dispatch(clearAuthError());
+  };
+
+  const handleEmailChange = (nextEmail: string) => {
+    setEmail(nextEmail);
+    setValidationErrors((current) => ({ ...current, email: undefined }));
+    dispatch(clearAuthError());
+  };
+
+  const handlePasswordChange = (nextPassword: string) => {
+    setPassword(nextPassword);
+    setValidationErrors((current) => ({ ...current, password: undefined }));
+    dispatch(clearAuthError());
+  };
+
+  const canSubmit = !isLoading;
 
   return (
     <Screen centered>
@@ -58,7 +86,8 @@ export default function RegisterScreen() {
             autoCapitalize="words"
             textContentType="name"
             value={fullName}
-            onChangeText={setFullName}
+            onChangeText={handleFullNameChange}
+            error={validationErrors.fullName}
           />
           <AppTextField
             label="Email"
@@ -68,7 +97,8 @@ export default function RegisterScreen() {
             autoCapitalize="none"
             textContentType="emailAddress"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
+            error={validationErrors.email}
           />
           <AppTextField
             label="Password"
@@ -78,7 +108,8 @@ export default function RegisterScreen() {
             showPasswordToggle
             textContentType="newPassword"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
+            error={validationErrors.password}
           />
           {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
           <GradientButton

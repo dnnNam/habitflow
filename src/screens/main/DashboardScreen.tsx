@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import BottomNavBar from '../../components/BottomNavBar';
 import GlassCard from '../../components/GlassCard';
-import GradientButton from '../../components/GradientButton';
 import Screen from '../../components/Screen';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { fetchProfile } from '../../features/auth/authSlice';
@@ -57,13 +56,33 @@ export default function DashboardScreen() {
   return (
     <Screen
       bottomOverlay={(
-        <BottomNavBar
-          activeTab="Today"
-          onProfilePress={() => {
-            dispatch(fetchProfile());
-            navigation.navigate('Profile');
-          }}
-        />
+        <>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('EmptyDashboard')}
+            style={styles.fab}
+          >
+            <Svg width={58} height={58} viewBox="0 0 58 58" style={styles.fabCircle}>
+              <Defs>
+                <SvgGradient id="dashboardFabGradient" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor={colors.primaryContainer} />
+                  <Stop offset="1" stopColor={colors.secondaryContainer} />
+                </SvgGradient>
+              </Defs>
+              <Circle cx="29" cy="29" r="28" fill="url(#dashboardFabGradient)" />
+            </Svg>
+            <View style={styles.fabIcon}>
+              <MaterialIcons name="add" size={28} color={colors.white} />
+            </View>
+          </TouchableOpacity>
+          <BottomNavBar
+            activeTab="Today"
+            onProfilePress={() => {
+              dispatch(fetchProfile());
+              navigation.navigate('Profile');
+            }}
+          />
+        </>
       )}
     >
       <View style={styles.topBar}>
@@ -140,9 +159,6 @@ export default function DashboardScreen() {
       </GlassCard>
 
       <View style={styles.bottomSpace} />
-      <View style={styles.fabWrapper}>
-        <GradientButton title="Add" icon="add" onPress={() => navigation.navigate('EmptyDashboard')} style={styles.fab} />
-      </View>
     </Screen>
   );
 }
@@ -446,15 +462,30 @@ const styles = StyleSheet.create({
   activeDay: {
     color: colors.primary,
   },
-  fabWrapper: {
+  fab: {
     position: 'absolute',
     right: spacing.xl,
     bottom: 96,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    shadowColor: colors.primaryContainer,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    elevation: 8,
+    zIndex: 20,
   },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  fabCircle: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  fabIcon: {
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomSpace: {
     height: 110,

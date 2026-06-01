@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors, fontSizes, fontWeights, gradients, radius, spacing } from '../theme';
+import { colors, fontSizes, fontWeights, radius, spacing } from '../theme';
 
 interface BrandHeaderProps {
   subtitle: string;
@@ -16,14 +15,7 @@ export default function BrandHeader({ subtitle, compact = false }: BrandHeaderPr
           <MaterialIcons name="water-drop" size={32} color={colors.primary} />
         </View>
       )}
-      <LinearGradient
-        colors={gradients.text}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.titleBackdrop}
-      >
-        <Text style={styles.title}>HabitFlow</Text>
-      </LinearGradient>
+      <Text style={styles.title}>HabitFlow</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
     </View>
   );
@@ -47,10 +39,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
-  },
-  titleBackdrop: {
-    borderRadius: radius.sm,
-    paddingHorizontal: 1,
   },
   title: {
     color: colors.primary,
