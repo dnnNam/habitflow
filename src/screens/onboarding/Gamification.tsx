@@ -1,5 +1,3 @@
-// screens/OnboardingScreen.tsx
-
 import React from 'react';
 import {
   View,
@@ -183,14 +181,13 @@ const styles = StyleSheet.create({
   },
 
   bottomContainer: {
-    // Đã xóa gap: 30 để tránh crash Android
   },
 
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30, // Thay thế gap: 30 của khối bottomContainer cũ bằng cách đẩy nút xuống dưới 30px
+    marginBottom: 30,
   },
 
   dot: {
@@ -198,7 +195,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 10,
     backgroundColor: '#2D3449',
-    marginHorizontal: 4, // Thay thế gap: 8 giúp cách đều các chấm tròn
+    marginHorizontal: 4,
   },
 
   activeDot: {
@@ -206,7 +203,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 10,
     backgroundColor: '#D0BCFF',
-    marginHorizontal: 4, // Đảm bảo khoảng cách đồng bộ với dot thường
+    marginHorizontal: 4,
   },
 
   button: {

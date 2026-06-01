@@ -1,8 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Gamification from "../screens/onboarding/Gamification";
 import SplashScreen1 from "../screens/onboarding/SplashScreen1";
-import SplashScreen2 from "../screens/onboarding/SpashScreen2";
-import SplashScreen3 from "../screens/onboarding/SpashScreen3";
+import SplashScreen2 from "../screens/onboarding/SplashScreen2";
+import SplashScreen3 from "../screens/onboarding/SplashScreen3";
 
 
 export type OnboardingStackParamList = {

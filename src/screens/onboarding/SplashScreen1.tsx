@@ -20,7 +20,7 @@ export default function SplashScreen1() {
   const navigation = useNavigation<SplashScreen1NavigationProp>();
   const floatAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const animationRef = useRef<any>(null);
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const handleNext = () => {
     if (animationRef.current) {
@@ -190,7 +190,6 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: "row",
     marginTop: 24,
-    // Đã xóa gap: 8 ở đây để tránh lỗi ép kiểu tầng Native
   },
 
   dot: {
@@ -198,7 +197,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: "#d0bcff",
-    marginHorizontal: 4, // Thay thế gap bằng cách cách đều hai bên 4px (tổng cộng giữa 2 chấm là 8px)
+    marginHorizontal: 4,
   },
 
   nextButton: {

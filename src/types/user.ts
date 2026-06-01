@@ -1,6 +1,12 @@
-interface User {
+export interface User {
   id: string;
-  name: string;
+  fullName: string;
+  name?: string;
   email: string;
-  // Add other user properties as needed
+  timeZone?: string;
+  role?: string;
+  isActive?: boolean;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
