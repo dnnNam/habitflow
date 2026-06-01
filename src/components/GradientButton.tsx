@@ -5,9 +5,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, fontSizes, fontWeights, gradients, radius, spacing } from '../theme';
 
 interface GradientButtonProps {
-  title: string;
+  title?: string;
   onPress: () => void;
   icon?: keyof typeof MaterialIcons.glyphMap;
+  gradientStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
   disabled?: boolean;
@@ -18,6 +19,7 @@ export default function GradientButton({
   title,
   onPress,
   icon = 'arrow-forward',
+  gradientStyle,
   style,
   children,
   disabled = false,
@@ -34,7 +36,7 @@ export default function GradientButton({
         colors={gradients.primary}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.gradient}
+        style={[styles.gradient, gradientStyle]}
       >
         {children ?? (
           <>
@@ -42,7 +44,7 @@ export default function GradientButton({
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
               <>
-                <Text style={styles.title}>{title}</Text>
+                {title ? <Text style={styles.title}>{title}</Text> : null}
                 <MaterialIcons name={icon} size={18} color={colors.white} />
               </>
             )}

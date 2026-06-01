@@ -13,6 +13,8 @@ import { clearAuthError, fetchProfile, login } from '../../features/auth/authSli
 import { selectAuthError, selectAuthIsLoading } from '../../features/auth/authSelector';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, fontSizes, fontWeights, radius, spacing } from '../../theme';
+import { hasValidationErrors, validateLoginForm } from '../../utils/authValidation';
+import type { LoginValidationErrors } from '../../utils/authValidation';
 
 type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -23,8 +25,16 @@ export default function LoginScreen() {
   const authError = useAppSelector(selectAuthError);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [validationErrors, setValidationErrors] = useState<LoginValidationErrors>({});
 
   const handleSignIn = async () => {
+    const nextValidationErrors = validateLoginForm({ email, password });
+    setValidationErrors(nextValidationErrors);
+
+    if (hasValidationErrors(nextValidationErrors)) {
+      return;
+    }
+
     const result = await dispatch(login({
       email: email.trim(),
       password,
@@ -45,7 +55,19 @@ export default function LoginScreen() {
     navigation.navigate('ForgotPassword');
   };
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !isLoading;
+  const handleEmailChange = (nextEmail: string) => {
+    setEmail(nextEmail);
+    setValidationErrors((current) => ({ ...current, email: undefined }));
+    dispatch(clearAuthError());
+  };
+
+  const handlePasswordChange = (nextPassword: string) => {
+    setPassword(nextPassword);
+    setValidationErrors((current) => ({ ...current, password: undefined }));
+    dispatch(clearAuthError());
+  };
+
+  const canSubmit = !isLoading;
 
   return (
     <Screen centered>
@@ -63,7 +85,8 @@ export default function LoginScreen() {
             autoCapitalize="none"
             textContentType="emailAddress"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
+            error={validationErrors.email}
           />
 
           <View style={styles.passwordHeader}>
@@ -80,7 +103,8 @@ export default function LoginScreen() {
             showPasswordToggle
             textContentType="password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
+            error={validationErrors.password}
           />
 
           {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
