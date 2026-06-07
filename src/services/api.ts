@@ -10,6 +10,9 @@ export const API_ENDPOINTS = {
     register: '/auth/register',
     me: '/auth/me',
   },
+  habits: {
+    list: '/habits', // GET /habits?status=&categoryId=
+  },
 } as const;
 
 export interface ApiRequestOptions extends AxiosRequestConfig {

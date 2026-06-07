@@ -1,3 +1,5 @@
+// src/screens/main/ProfileScreen.tsx
+
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -10,6 +12,7 @@ import GlassCard from '../../components/GlassCard';
 import Screen from '../../components/Screen';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { fetchProfile, logout } from '../../features/auth/authSlice';
+import { resetHabits } from '../../features/habits/habitsSlice';
 import { selectAccessToken, selectCurrentUser, selectProfileStatus } from '../../features/auth/authSelector';
 import type { MainStackParamList } from '../../navigation/MainNavigator';
 import { colors, fontSizes, fontWeights, gradients, radius, spacing } from '../../theme';
@@ -45,6 +48,12 @@ export default function ProfileScreen() {
     }
   }, [accessToken, dispatch, profileStatus]);
 
+  // Reset cả auth + habits khi logout
+  const handleLogout = () => {
+    dispatch(logout());
+    dispatch(resetHabits());
+  };
+
   return (
     <Screen
       bottomOverlay={(
@@ -60,7 +69,7 @@ export default function ProfileScreen() {
           <Text style={styles.smallAvatarText}>{initials}</Text>
         </TouchableOpacity>
         <Text style={styles.brand}>HabitFlow</Text>
-        <TouchableOpacity activeOpacity={0.75} style={styles.iconButton} onPress={() => dispatch(logout())}>
+        <TouchableOpacity activeOpacity={0.75} style={styles.iconButton} onPress={handleLogout}>
           <MaterialIcons name="logout" size={21} color={colors.error} />
         </TouchableOpacity>
       </View>
@@ -114,7 +123,7 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      <TouchableOpacity activeOpacity={0.78} style={styles.logoutPanel} onPress={() => dispatch(logout())}>
+      <TouchableOpacity activeOpacity={0.78} style={styles.logoutPanel} onPress={handleLogout}>
         <MaterialIcons name="logout" size={20} color={colors.error} />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
