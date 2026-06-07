@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { AxiosError, AxiosRequestConfig } from 'axios';
 
 export const API_TIMEOUT_MS = 30000;
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ;
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export const API_ENDPOINTS = {
   auth: {
@@ -11,7 +11,7 @@ export const API_ENDPOINTS = {
     me: '/auth/me',
   },
   habits: {
-    list: '/habits', // GET /habits?status=&categoryId=
+    list: '/habits',
   },
 } as const;
 
@@ -38,7 +38,6 @@ export async function apiRequest<TResponse>(
       timeout: timeoutMs,
       ...requestOptions,
     });
-
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error));
@@ -49,10 +48,7 @@ export function apiGet<TResponse>(
   endpoint: string,
   options?: ApiRequestOptions,
 ) {
-  return apiRequest<TResponse>(endpoint, {
-    ...options,
-    method: 'GET',
-  });
+  return apiRequest<TResponse>(endpoint, { ...options, method: 'GET' });
 }
 
 export function apiPost<TResponse, TPayload>(
@@ -73,18 +69,22 @@ export function createBearerAuthHeader(accessToken: string, tokenType = 'Bearer'
   };
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ message?: string; error?: string }>;
-    const message = axiosError.response?.data?.message;
-    const responseError = axiosError.response?.data?.error;
+    const axiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
+    const data = axiosError.response?.data;
 
-    if (message) {
-      return message;
+    console.log('[api] axios error status:', axiosError.response?.status);
+    console.log('[api] axios error data:', data);
+
+    if (data?.message) {
+      // NestJS class-validator trả message: string[]
+      if (Array.isArray(data.message)) return data.message.join(', ');
+      if (typeof data.message === 'string') return data.message;
     }
 
-    if (responseError) {
-      return responseError;
+    if (data?.error && typeof data.error === 'string') {
+      return data.error;
     }
 
     if (axiosError.response?.status) {
