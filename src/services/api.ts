@@ -12,6 +12,9 @@ export const API_ENDPOINTS = {
   },
   habits: {
     list: '/habits',
+    detail: (id: string) => `/habits/${id}`,
+    status: (id: string) => `/habits/${id}/status`,
+    schedule: (id: string) => `/habits/${id}/schedule`,
   },
 } as const;
 
@@ -99,4 +102,35 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Request failed. Please try again.';
+}
+
+export function apiPatch<TResponse, TPayload>(
+  endpoint: string,
+  payload: TPayload,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, {
+    ...options,
+    method: 'PATCH',
+    data: payload,
+  });
+}
+
+export function apiPut<TResponse, TPayload>(
+  endpoint: string,
+  payload: TPayload,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, {
+    ...options,
+    method: 'PUT',
+    data: payload,
+  });
+}
+ 
+export function apiDelete<TResponse>(
+  endpoint: string,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, { ...options, method: 'DELETE' });
 }

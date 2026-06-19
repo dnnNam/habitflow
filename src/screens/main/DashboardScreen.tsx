@@ -1,6 +1,6 @@
 // src/screens/main/DashboardScreen.tsx
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
@@ -9,6 +9,8 @@ import { useNavigation } from '@react-navigation/native';
 import BottomNavBar from '../../components/BottomNavBar';
 import GlassCard from '../../components/GlassCard';
 import Screen from '../../components/Screen';
+import ReminderModal from '../../components/ReminderModal';
+import EmptyDashboardScreen from './EmptyDashboardScreen';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { fetchProfile } from '../../features/auth/authSlice';
 
@@ -16,8 +18,14 @@ import { selectAccessToken, selectCurrentUser, selectProfileStatus } from '../..
 
 import type { MainStackParamList } from '../../navigation/MainNavigator';
 import { colors, fontSizes, fontWeights, radius, spacing } from '../../theme';
-import { selectHabits, selectHabitsError, selectHabitsStatus } from '../../features/habits/HabitSelector';
-import { fetchHabits } from '../../features/habits/habitsSlice';
+import {
+  selectHabits,
+  selectHabitsError,
+  selectHabitsStatus,
+  selectHabitsStatusUpdateId,
+} from '../../features/habits/HabitSelector';
+import { changeHabitStatus, fetchHabits } from '../../features/habits/habitsSlice';
+import type { Habit, HabitStatus, RepeatType } from '../../types/habit';
 
 type DashboardNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Dashboard'>;
 
@@ -37,6 +45,76 @@ const week: WeekBar[] = [
   { day: 'S', value: 0 },
 ] as const;
 
+const GOAL_TYPE_LABELS: Record<string, string> = {
+  boolean: 'Có / Không',
+  count: 'Số lần',
+  duration: 'Thời lượng',
+  distance: 'Khoảng cách',
+};
+
+const GOAL_TYPE_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
+  boolean: 'check-circle-outline',
+  count: 'tag',
+  duration: 'schedule',
+  distance: 'straighten',
+};
+
+const DAY_SHORT_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+const STATUS_CYCLE: Record<HabitStatus, HabitStatus> = {
+  active: 'paused',
+  paused: 'archived',
+  archived: 'active',
+};
+
+const STATUS_META: Record<HabitStatus, { label: string; icon: keyof typeof MaterialIcons.glyphMap }> = {
+  active: { label: 'Active', icon: 'play-circle-outline' },
+  paused: { label: 'Paused', icon: 'pause-circle-outline' },
+  archived: { label: 'Archived', icon: 'archive' },
+};
+
+function describeSchedule(habit: Habit): string {
+  const repeatType: RepeatType | undefined = habit.schedule?.repeatType;
+  const config = habit.schedule?.repeatConfig ?? {};
+
+  if (!repeatType) return 'No schedule';
+
+  if (repeatType === 'daily') return 'Daily';
+
+  if (repeatType === 'weekly') {
+    const days = config.daysOfWeek ?? [];
+    if (days.length === 0) return 'Weekly';
+    return days
+      .slice()
+      .sort((a, b) => a - b)
+      .map((d) => DAY_SHORT_LABELS[d - 1] ?? `?${d}`)
+      .join(', ');
+  }
+
+  if (repeatType === 'monthly') {
+    const days = config.daysOfMonth ?? [];
+    if (days.length === 0) return 'Monthly';
+    return `Day ${days.slice().sort((a, b) => a - b).join(', ')} of month`;
+  }
+
+  if (repeatType === 'custom') {
+    const interval = config.intervalDays;
+    return interval ? `Every ${interval} day(s)` : 'Custom';
+  }
+
+  return repeatType;
+}
+
+// streak từ API là OBJECT { currentStreak, longestStreak, lastCompletedDate, ... }
+// — không phải số. Helper này luôn trả về số an toàn để hiển thị.
+function getCurrentStreak(habit: Habit): number {
+  return habit.streak?.currentStreak ?? 0;
+}
+
+function getLongestStreak(habit: Habit): number {
+  return habit.streak?.longestStreak ?? 0;
+}
+
 export default function DashboardScreen() {
   const navigation = useNavigation<DashboardNavigationProp>();
   const dispatch = useAppDispatch();
@@ -50,9 +128,10 @@ export default function DashboardScreen() {
   const habits = useAppSelector(selectHabits);
   const habitsStatus = useAppSelector(selectHabitsStatus);
   const habitsError = useAppSelector(selectHabitsError);
+  const statusUpdateId = useAppSelector(selectHabitsStatusUpdateId);
 
-  // Dùng ref để tránh redirect nhiều lần khi re-render
-  const hasRedirected = useRef(false);
+  // Reminder modal state: habit đang được chọn để mở reminder (null = đóng)
+  const [reminderHabit, setReminderHabit] = useState<{ id: string; name: string } | null>(null);
 
   // 1. Fetch profile nếu chưa có
   useEffect(() => {
@@ -68,21 +147,16 @@ export default function DashboardScreen() {
     }
   }, [accessToken, dispatch, habitsStatus]);
 
-  // 3. Sau khi fetch xong → redirect nếu không có habits
-  useEffect(() => {
-    if (habitsStatus !== 'succeeded') return;
-    if (hasRedirected.current) return;
-
-    hasRedirected.current = true;
-
-    if (habits.length === 0) {
-      // replace để user không thể bấm Back quay về màn hình trống
-      navigation.replace('EmptyDashboard');
-    }
-  }, [habitsStatus, habits.length, navigation]);
-
   const displayName = user?.fullName ?? user?.name ?? 'HabitFlow user';
   const initials = getInitials(displayName);
+
+  const activeHabitsCount = habits.filter((h) => h.status === 'active').length;
+  const bestStreak = habits.reduce((max, h) => Math.max(max, getCurrentStreak(h)), 0);
+
+  const handleCyclePress = (habit: Habit) => {
+    const nextStatus = STATUS_CYCLE[habit.status];
+    dispatch(changeHabitStatus({ habitId: habit.id, status: nextStatus }));
+  };
 
   // ── Loading state ─────────────────────────────────────────────────
   if (habitsStatus === 'idle' || habitsStatus === 'loading') {
@@ -92,6 +166,14 @@ export default function DashboardScreen() {
         <Text style={styles.loadingText}>Loading your habits...</Text>
       </Screen>
     );
+  }
+
+  // ── Empty state — chưa có habit nào → hiển thị thẳng EmptyDashboardScreen ──
+  // Render trực tiếp (không dùng navigation.replace) để luôn đồng bộ với dữ
+  // liệu thật: nếu sau đó habits xuất hiện (vừa tạo habit mới) hoặc biến mất
+  // (xóa hết habit), UI tự chuyển qua lại đúng trạng thái mà không bị kẹt.
+  if (habitsStatus === 'succeeded' && habits.length === 0) {
+    return <EmptyDashboardScreen />;
   }
 
   // ── Error state ───────────────────────────────────────────────────
@@ -106,7 +188,6 @@ export default function DashboardScreen() {
             activeOpacity={0.8}
             style={styles.retryButton}
             onPress={() => {
-              hasRedirected.current = false;
               if (accessToken) {
                 dispatch(fetchHabits({ accessToken }));
               }
@@ -121,13 +202,16 @@ export default function DashboardScreen() {
   }
 
   // ── Main Dashboard UI ─────────────────────────────────────────────
+  // QUAN TRỌNG: không còn .slice(0, 3) — hiển thị TOÀN BỘ habits trả về từ API,
+  // dạng list dọc thay vì 3 card ngang như bản cũ. Đây là phần fix chính cho
+  // việc Dashboard "không thấy danh sách habit".
   return (
     <Screen
       bottomOverlay={(
         <>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('EmptyDashboard')}
+            onPress={() => navigation.navigate('CreateHabit')}
             style={styles.fab}
           >
             <Svg width={58} height={58} viewBox="0 0 58 58" style={styles.fabCircle}>
@@ -185,28 +269,29 @@ export default function DashboardScreen() {
           <View style={styles.pill}>
             <Text style={styles.pillText}>{habits.length} Habits</Text>
           </View>
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>{activeHabitsCount} Active</Text>
+          </View>
           <View style={[styles.pill, styles.successPill]}>
-            <Text style={[styles.pillText, styles.successText]}>12 Day Streak</Text>
+            <Text style={[styles.pillText, styles.successText]}>Best streak {bestStreak}d</Text>
           </View>
         </View>
       </GlassCard>
 
-      {/* Daily Flow section */}
+      {/* Habit list section — hiển thị TẤT CẢ habit */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionLabel}>Daily Flow</Text>
-        <TouchableOpacity activeOpacity={0.75} onPress={() => navigation.navigate('EmptyDashboard')}>
-          <Text style={styles.sectionAction}>View All</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionLabel}>Your Habits</Text>
+        <Text style={styles.sectionCount}>{habits.length}</Text>
       </View>
 
-      {/* Habit cards — hiển thị tối đa 3 habit đầu từ API */}
-      <View style={styles.habitRow}>
-        {habits.slice(0, 3).map((habit) => (
-          <HabitCard
+      <View style={styles.habitList}>
+        {habits.map((habit) => (
+          <HabitListItem
             key={habit.id}
-            title={habit.name}
-            meta={habit.goalType}
-            status={habit.status}
+            habit={habit}
+            isUpdatingStatus={statusUpdateId === habit.id}
+            onReminderPress={() => setReminderHabit({ id: habit.id, name: habit.name })}
+            onStatusPress={() => handleCyclePress(habit)}
           />
         ))}
       </View>
@@ -237,6 +322,14 @@ export default function DashboardScreen() {
       </GlassCard>
 
       <View style={styles.bottomSpace} />
+
+      {/* Reminder modal — hiển thị khi user bấm icon chuông trên 1 habit item */}
+      <ReminderModal
+        visible={!!reminderHabit}
+        habitId={reminderHabit?.id ?? ''}
+        habitName={reminderHabit?.name ?? ''}
+        onClose={() => setReminderHabit(null)}
+      />
     </Screen>
   );
 }
@@ -291,35 +384,119 @@ function ProgressRing({ progress }: { progress: number }) {
   );
 }
 
-function HabitCard({
-  title,
-  meta,
-  status,
+function HabitListItem({
+  habit,
+  isUpdatingStatus,
+  onReminderPress,
+  onStatusPress,
 }: {
-  title: string;
-  meta: string;
-  status: string;
+  habit: Habit;
+  isUpdatingStatus: boolean;
+  onReminderPress: () => void;
+  onStatusPress: () => void;
 }) {
-  const done = status === 'archived';
-  const active = status === 'active';
+  const done = habit.status === 'archived';
+  const active = habit.status === 'active';
+  const paused = habit.status === 'paused';
+
+  const goalIcon = GOAL_TYPE_ICONS[habit.goalType] ?? 'track-changes';
+  const goalLabel = GOAL_TYPE_LABELS[habit.goalType] ?? habit.goalType;
+  const scheduleLabel = describeSchedule(habit);
+  const statusMeta = STATUS_META[habit.status];
+  const currentStreak = getCurrentStreak(habit);
+  const longestStreak = getLongestStreak(habit);
+
+  // category lồng trong response (habit.category), không phải chỉ categoryId
+  const categoryColor = habit.category?.color ?? colors.primary;
+  const categoryName = habit.category?.name;
 
   return (
-    <GlassCard style={[styles.habitCard, done && styles.doneCard, active && styles.activeCard]}>
-      <View style={styles.habitTop}>
-        <View style={[styles.habitIcon, done && styles.doneIcon, active && styles.activeIcon]}>
+    <GlassCard style={[styles.habitItem, active && styles.activeItem, done && styles.doneItem, paused && styles.pausedItem]}>
+      <View style={styles.habitItemTop}>
+        <View style={[styles.habitIcon, { backgroundColor: `${categoryColor}22` }]}>
           <MaterialIcons
             name="track-changes"
             size={18}
-            color={done ? colors.tertiary : active ? colors.primary : colors.onSurfaceVariant}
+            color={categoryColor}
           />
         </View>
-        <View style={[styles.checkCircle, done && styles.checkedCircle]}>
-          {done && <MaterialIcons name="check" size={14} color={colors.surfaceContainerLowest} />}
+
+        <View style={styles.habitItemTitleWrap}>
+          <Text style={styles.habitItemTitle} numberOfLines={1}>{habit.name}</Text>
+          {categoryName ? (
+            <Text style={styles.habitItemCategory} numberOfLines={1}>{categoryName}</Text>
+          ) : habit.description ? (
+            <Text style={styles.habitItemCategory} numberOfLines={1}>{habit.description}</Text>
+          ) : null}
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onReminderPress}
+          style={styles.reminderBellBtn}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <MaterialIcons name="notifications" size={16} color={colors.onSurfaceVariant} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.statRow}>
+        <View style={styles.statChip}>
+          <MaterialIcons name={goalIcon} size={14} color={colors.onSurfaceVariant} />
+          <Text style={styles.statChipText}>{goalLabel}</Text>
+        </View>
+
+        <View style={styles.statChip}>
+          <MaterialIcons name="event-repeat" size={14} color={colors.onSurfaceVariant} />
+          <Text style={styles.statChipText} numberOfLines={1}>{scheduleLabel}</Text>
+        </View>
+
+        <View style={[styles.statChip, styles.streakChip]}>
+          <MaterialIcons name="local-fire-department" size={14} color={colors.tertiary} />
+          <Text style={[styles.statChipText, styles.streakChipText]}>
+            {currentStreak}d streak
+            {longestStreak > currentStreak ? ` · best ${longestStreak}d` : ''}
+          </Text>
         </View>
       </View>
-      <View>
-        <Text style={styles.habitTitle} numberOfLines={1}>{title}</Text>
-        <Text style={[styles.habitMeta, active && styles.activeMeta]}>{meta}</Text>
+
+      <View style={styles.habitItemFooter}>
+        <Text style={styles.startDateText}>
+          Start: {habit.startDate ? habit.startDate.slice(0, 10) : '—'}
+        </Text>
+
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={onStatusPress}
+          disabled={isUpdatingStatus}
+          style={[
+            styles.statusBadge,
+            active && styles.statusBadgeActive,
+            paused && styles.statusBadgePaused,
+            done && styles.statusBadgeArchived,
+          ]}
+        >
+          {isUpdatingStatus ? (
+            <ActivityIndicator size="small" color={colors.onSurface} />
+          ) : (
+            <>
+              <MaterialIcons
+                name={statusMeta.icon}
+                size={14}
+                color={active ? colors.tertiary : paused ? colors.secondary : colors.onSurfaceVariant}
+              />
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  active && styles.statusBadgeTextActive,
+                  paused && styles.statusBadgeTextPaused,
+                ]}
+              >
+                {statusMeta.label}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </GlassCard>
   );
@@ -487,77 +664,133 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  sectionAction: {
+  sectionCount: {
     color: colors.primary,
     fontSize: fontSizes.label,
     fontWeight: fontWeights.bold,
   },
 
-  // Habit cards
-  habitRow: {
-    flexDirection: 'row',
+  // Habit list (full vertical list, replaces old top-3 horizontal cards)
+  habitList: {
     gap: spacing.md,
     marginBottom: spacing.section,
   },
-  habitCard: {
-    flex: 1,
-    minHeight: 132,
-    padding: spacing.md,
-    justifyContent: 'space-between',
+  habitItem: {
+    gap: spacing.md,
   },
-  doneCard: {
+  activeItem: {
+    borderColor: 'rgba(208,188,255,0.38)',
+  },
+  doneItem: {
     backgroundColor: 'rgba(0,165,114,0.08)',
     borderColor: 'rgba(78,222,163,0.28)',
   },
-  activeCard: {
-    borderColor: 'rgba(208,188,255,0.38)',
+  pausedItem: {
+    opacity: 0.85,
   },
-  habitTop: {
+  habitItemTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md,
   },
   habitIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.surfaceContainerHigh,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  doneIcon: {
-    backgroundColor: 'rgba(78,222,163,0.16)',
+  habitItemTitleWrap: {
+    flex: 1,
   },
-  activeIcon: {
-    backgroundColor: 'rgba(208,188,255,0.14)',
-  },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkedCircle: {
-    backgroundColor: colors.tertiary,
-    borderColor: colors.tertiary,
-  },
-  habitTitle: {
+  habitItemTitle: {
     color: colors.onSurface,
-    fontSize: 14,
+    fontSize: fontSizes.body,
     fontWeight: fontWeights.bold,
   },
-  habitMeta: {
+  habitItemCategory: {
     color: colors.onSurfaceVariant,
     fontSize: fontSizes.label,
-    fontWeight: fontWeights.semibold,
     marginTop: 2,
-    textTransform: 'capitalize',
   },
-  activeMeta: {
-    color: colors.primary,
+  reminderBellBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+
+  statRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceContainerHigh,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    maxWidth: '100%',
+  },
+  statChipText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: fontWeights.semibold,
+  },
+  streakChip: {
+    backgroundColor: 'rgba(78,222,163,0.12)',
+  },
+  streakChipText: {
+    color: colors.tertiary,
+  },
+
+  habitItemFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  startDateText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: fontWeights.semibold,
+    fontVariant: ['tabular-nums'],
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    backgroundColor: colors.surfaceContainerHigh,
+    minHeight: 26,
+    minWidth: 90,
+    justifyContent: 'center',
+  },
+  statusBadgeActive: {
+    backgroundColor: 'rgba(78,222,163,0.14)',
+  },
+  statusBadgePaused: {
+    backgroundColor: 'rgba(173,198,255,0.14)',
+  },
+  statusBadgeArchived: {
+    backgroundColor: colors.surfaceContainerHighest,
+  },
+  statusBadgeText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: fontWeights.bold,
+  },
+  statusBadgeTextActive: {
+    color: colors.tertiary,
+  },
+  statusBadgeTextPaused: {
+    color: colors.secondary,
   },
 
   // Chart
