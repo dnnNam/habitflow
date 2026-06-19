@@ -12,6 +12,7 @@
 // Step 3 (schedule): Chọn lịch → gọi submitCreateHabit → step='success'
 
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
 import { createCategory, CreateCategoryPayload } from '../../services/categoriesApi';
 import { createHabit, CreateHabitPayload } from '../../services/habitsApi';
 import type { Category } from '../../types/category';
@@ -45,47 +46,61 @@ interface CreateHabitState {
   createdHabit: Habit | null;
 }
 
+interface ApiErrorResponse {
+  message?: string | string[];
+  error?: string;
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const initialDraft: HabitDraft = {
-  name: '',
-  goalType: 'boolean',
-  categoryId: undefined,
-  selectedCategoryKey: undefined,
-  selectedCategoryName: undefined,
-  selectedCategoryIcon: undefined,
-  selectedCategoryColor: undefined,
-  repeatType: 'daily',
-  repeatConfig: {},
-  startDate: todayISO(),
-};
+function createInitialDraft(): HabitDraft {
+  return {
+    name: '',
+    goalType: 'boolean',
+    categoryId: undefined,
+    selectedCategoryKey: undefined,
+    selectedCategoryName: undefined,
+    selectedCategoryIcon: undefined,
+    selectedCategoryColor: undefined,
+    repeatType: 'daily',
+    repeatConfig: {},
+    startDate: todayISO(),
+  };
+}
 
-const initialState: CreateHabitState = {
-  step: 'name_category',
-  draft: initialDraft,
-  createCategoryStatus: 'idle',
-  createCategoryError: null,
-  createHabitStatus: 'idle',
-  createHabitError: null,
-  createdHabit: null,
-};
+function createInitialState(): CreateHabitState {
+  return {
+    step: 'name_category',
+    draft: createInitialDraft(),
+    createCategoryStatus: 'idle',
+    createCategoryError: null,
+    createHabitStatus: 'idle',
+    createHabitError: null,
+    createdHabit: null,
+  };
+}
+
+const initialState: CreateHabitState = createInitialState();
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function extractErrorMessage(e: unknown, fallback: string): string {
   if (typeof e === 'string') return e;
-  if (e instanceof Error) return e.message;
-  const axiosData = (e as any)?.response?.data;
-  if (axiosData) {
-    if (typeof axiosData.message === 'string') return axiosData.message;
-    if (Array.isArray(axiosData.message)) return axiosData.message.join(', ');
-    if (typeof axiosData.error === 'string') return axiosData.error;
-    try { return JSON.stringify(axiosData); } catch { /* noop */ }
+
+  if (axios.isAxiosError<ApiErrorResponse>(e)) {
+    const data = e.response?.data;
+    if (data?.message) {
+      if (typeof data.message === 'string') return data.message;
+      return data.message.join(', ');
+    }
+    if (typeof data?.error === 'string') return data.error;
+    if (e.message) return e.message;
   }
-  const msg = (e as any)?.message;
-  if (typeof msg === 'string') return msg;
+
+  if (e instanceof Error) return e.message;
+
   return fallback;
 }
 
@@ -136,9 +151,8 @@ export const submitCreateHabit = createAsyncThunk<
         tokenType ?? 'Bearer',
       );
       categoryId = catRes.data.id;
-    } catch (e) {
-      // Nếu tạo category thất bại (ví dụ tên trùng), vẫn tiến hành tạo habit không có category
-      console.warn('[submitCreateHabit] failed to auto-create category:', e);
+    } catch {
+      // Nếu tạo category thất bại (ví dụ tên trùng), vẫn tiến hành tạo habit không có category.
     }
   }
 
@@ -153,16 +167,10 @@ export const submitCreateHabit = createAsyncThunk<
     },
   };
 
-  console.log('[submitCreateHabit] payload =>', JSON.stringify(payload, null, 2));
-
   try {
     const res = await createHabit(accessToken, payload, tokenType ?? 'Bearer');
-    console.log('[submitCreateHabit] success =>', JSON.stringify(res?.data, null, 2));
     return res.data;
   } catch (e: unknown) {
-    const axiosErr = e as any;
-    console.log('[createHabit] e.response?.status:', axiosErr?.response?.status);
-    console.log('[createHabit] e.response?.data:', axiosErr?.response?.data);
     return rejectWithValue(extractErrorMessage(e, 'Failed to create habit.'));
   }
 });
@@ -179,7 +187,7 @@ const createHabitSlice = createSlice({
     updateDraft(state, action: PayloadAction<Partial<HabitDraft>>) {
       state.draft = { ...state.draft, ...action.payload };
     },
-    resetCreateHabit: () => initialState,
+    resetCreateHabit: () => createInitialState(),
     clearCreateHabitError(state) {
       state.createHabitError = null;
       state.createCategoryError = null;

@@ -34,6 +34,8 @@ export default function HabitSuccessScreen({ onDone }: Props) {
   const xpOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let xpTimer: ReturnType<typeof setTimeout> | undefined;
+
     // Trophy entrance
     Animated.sequence([
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 6 }),
@@ -41,21 +43,27 @@ export default function HabitSuccessScreen({ onDone }: Props) {
     ]).start();
 
     // Float loop
-    Animated.loop(
+    const floatLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(float, { toValue: -12, duration: 2000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(float, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
-    ).start();
+    );
+    floatLoop.start();
 
     // XP badge slide in
-    setTimeout(() => {
+    xpTimer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(xpSlide, { toValue: 0, duration: 400, easing: Easing.out(Easing.back(1.5)), useNativeDriver: true }),
         Animated.timing(xpOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
       ]).start();
     }, 600);
-  }, []);
+
+    return () => {
+      if (xpTimer) clearTimeout(xpTimer);
+      floatLoop.stop();
+    };
+  }, [float, opacity, scale, xpOpacity, xpSlide]);
 
   const handleDone = () => {
     // Refresh habits list

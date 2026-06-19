@@ -19,6 +19,11 @@ export interface ApiRequestOptions extends AxiosRequestConfig {
   timeoutMs?: number;
 }
 
+interface ApiErrorResponse {
+  message?: string | string[];
+  error?: string;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT_MS,
@@ -71,11 +76,8 @@ export function createBearerAuthHeader(accessToken: string, tokenType = 'Bearer'
 
 function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
+    const axiosError = error as AxiosError<ApiErrorResponse>;
     const data = axiosError.response?.data;
-
-    console.log('[api] axios error status:', axiosError.response?.status);
-    console.log('[api] axios error data:', data);
 
     if (data?.message) {
       // NestJS class-validator trả message: string[]

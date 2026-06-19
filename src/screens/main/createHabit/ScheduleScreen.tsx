@@ -57,20 +57,29 @@ export default function ScheduleScreen() {
   const [selectedDays, setSelectedDays] = useState<number[]>(
     draft.repeatConfig.daysOfWeek ?? [1, 2, 3, 4, 5],
   );
+  const [scheduleError, setScheduleError] = useState('');
 
   const isLoading = createStatus === 'loading';
+  const hasWeeklyDays = draft.repeatType !== 'weekly' || selectedDays.length > 0;
 
   const toggleDay = (isoDay: number) => {
+    setScheduleError('');
     setSelectedDays((prev) =>
       prev.includes(isoDay) ? prev.filter((d) => d !== isoDay) : [...prev, isoDay].sort(),
     );
   };
 
   const handleFrequencyChange = (freq: RepeatType) => {
+    setScheduleError('');
     dispatch(updateDraft({ repeatType: freq, repeatConfig: {} }));
   };
 
   const handleCreate = () => {
+    if (!hasWeeklyDays) {
+      setScheduleError('Select at least one day.');
+      return;
+    }
+
     const repeatConfig =
       draft.repeatType === 'weekly'
         ? { daysOfWeek: selectedDays }
@@ -90,6 +99,7 @@ export default function ScheduleScreen() {
             icon="rocket-launch"
             onPress={handleCreate}
             loading={isLoading}
+            disabled={!hasWeeklyDays}
           />
         </View>
       }
@@ -161,9 +171,9 @@ export default function ScheduleScreen() {
                 );
               })}
             </View>
-            <Text style={styles.daysHint}>
+            <Text style={[styles.daysHint, scheduleError && styles.daysHintError]}>
               {selectedDays.length === 0
-                ? 'Select at least one day'
+                ? (scheduleError || 'Select at least one day')
                 : selectedDays.map((d) => DAY_LABELS[d - 1]).join(', ')}
             </Text>
           </GlassCard>
@@ -323,6 +333,9 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.label,
     fontWeight: fontWeights.semibold,
     textAlign: 'center',
+  },
+  daysHintError: {
+    color: colors.error,
   },
   dateCard: {
     flexDirection: 'row',

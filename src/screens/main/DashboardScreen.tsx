@@ -127,7 +127,7 @@ export default function DashboardScreen() {
         <>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('EmptyDashboard')}
+            onPress={() => navigation.navigate('CreateHabit')}
             style={styles.fab}
           >
             <Svg width={58} height={58} viewBox="0 0 58 58" style={styles.fabCircle}>
