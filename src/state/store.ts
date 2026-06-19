@@ -6,6 +6,7 @@ import habitsReducer from '../features/habits/habitsSlice';
 import createHabitReducer from '../features/createHabit/createHabitSlice';
 import habitLogsReducer from '../features/habitLogs/habitLogsSlice';
 import statisticsReducer from '../features/statistics/statisticsSlice';
+import remindersReducer from '../features/reminders/remindersSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     createHabit: createHabitReducer,
     habitLogs: habitLogsReducer,
     statistics: statisticsReducer,
+    reminders: remindersReducer,
   },
 });
 

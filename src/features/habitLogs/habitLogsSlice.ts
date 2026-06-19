@@ -1,197 +1,161 @@
+
+// Quản lý check-in logs cho từng habit theo ngày.
+// - fetchTodayLogs: load tất cả log của ngày hôm nay khi vào Dashboard
+// - checkIn: POST /habit-logs/check-in
+// - skip: POST /habit-logs/:habitId/skip
+
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import {
-  checkInHabit,
-  getHabitLogs,
-  processMissedHabitLogs,
-  skipHabit,
-  updateHabitLog,
-} from '../../services/habitLogsApi';
-import type {
-  CheckInHabitPayload,
-  GetHabitLogsParams,
-  ProcessMissedPayload,
-  SkipHabitPayload,
-  UpdateHabitLogPayload,
-} from '../../services/habitLogsApi';
-import type { HabitLog } from '../../types/habitLog';
+
 import type { RootState } from '../../state/store';
+import { HabitLog } from '../../types/habitLog';
+import { checkInHabit, CheckInPayload, getHabitLogs, skipHabit } from '../../services/habitLogsApi';
 
 interface HabitLogsState {
-  items: HabitLog[];
-  status: 'idle' | 'loading' | 'succeeded' | 'failed';
-  mutationStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
-  error: string | null;
+  // Map habitId -> log của ngày hôm nay
+  todayLogs: Record<string, HabitLog>;
+  fetchStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  fetchError: string | null;
+  // Trạng thái mutation cho từng habitId (để show loading trên từng item)
+  mutatingIds: Record<string, boolean>;
   mutationError: string | null;
 }
 
 const initialState: HabitLogsState = {
-  items: [],
-  status: 'idle',
-  mutationStatus: 'idle',
-  error: null,
+  todayLogs: {},
+  fetchStatus: 'idle',
+  fetchError: null,
+  mutatingIds: {},
   mutationError: null,
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function upsertLog(items: HabitLog[], log: HabitLog) {
-  const existingIndex = items.findIndex((item) => item.id === log.id);
-  if (existingIndex >= 0) {
-    items[existingIndex] = log;
-    return;
-  }
-  items.unshift(log);
+function extractError(e: unknown, fallback: string): string {
+  if (typeof e === 'string') return e;
+  if (e instanceof Error) return e.message;
+  const msg = (e as any)?.response?.data?.message;
+  if (typeof msg === 'string') return msg;
+  if (Array.isArray(msg)) return msg.join(', ');
+  return fallback;
 }
 
-export const fetchHabitLogs = createAsyncThunk<
+// ── Thunks ─────────────────────────────────────────────────────────
+
+export const fetchTodayLogs = createAsyncThunk<
   HabitLog[],
-  GetHabitLogsParams | undefined,
+  void,
   { state: RootState; rejectValue: string }
->('habitLogs/fetchAll', async (params, { getState, rejectWithValue }) => {
+>('habitLogs/fetchToday', async (_, { getState, rejectWithValue }) => {
   const { accessToken, tokenType } = getState().auth;
   if (!accessToken) return rejectWithValue('Not authenticated.');
-
   try {
-    const response = await getHabitLogs(accessToken, tokenType ?? 'Bearer', params);
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error, 'Failed to load habit logs.'));
+    const res = await getHabitLogs(accessToken, { date: todayISO() }, tokenType ?? 'Bearer');
+    return res.data;
+  } catch (e) {
+    return rejectWithValue(extractError(e, 'Failed to load today logs.'));
   }
 });
 
-export const submitHabitCheckIn = createAsyncThunk<
+export const checkIn = createAsyncThunk<
   HabitLog,
-  CheckInHabitPayload,
+  CheckInPayload,
   { state: RootState; rejectValue: string }
 >('habitLogs/checkIn', async (payload, { getState, rejectWithValue }) => {
   const { accessToken, tokenType } = getState().auth;
   if (!accessToken) return rejectWithValue('Not authenticated.');
-
   try {
-    const response = await checkInHabit(accessToken, payload, tokenType ?? 'Bearer');
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error, 'Failed to check in habit.'));
+    const res = await checkInHabit(accessToken, payload, tokenType ?? 'Bearer');
+    return res.data;
+  } catch (e) {
+    return rejectWithValue(extractError(e, 'Check-in failed.'));
   }
 });
 
-export const submitHabitSkip = createAsyncThunk<
+export const skipToday = createAsyncThunk<
   HabitLog,
-  { habitId: string; payload: SkipHabitPayload },
+  { habitId: string },
   { state: RootState; rejectValue: string }
->('habitLogs/skip', async ({ habitId, payload }, { getState, rejectWithValue }) => {
+>('habitLogs/skip', async ({ habitId }, { getState, rejectWithValue }) => {
   const { accessToken, tokenType } = getState().auth;
   if (!accessToken) return rejectWithValue('Not authenticated.');
-
   try {
-    const response = await skipHabit(accessToken, habitId, payload, tokenType ?? 'Bearer');
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error, 'Failed to skip habit.'));
+    const res = await skipHabit(
+      accessToken,
+      habitId,
+      { logDate: todayISO() },
+      tokenType ?? 'Bearer',
+    );
+    return res.data;
+  } catch (e) {
+    return rejectWithValue(extractError(e, 'Skip failed.'));
   }
 });
 
-export const submitHabitLogUpdate = createAsyncThunk<
-  HabitLog,
-  { logId: string; payload: UpdateHabitLogPayload },
-  { state: RootState; rejectValue: string }
->('habitLogs/update', async ({ logId, payload }, { getState, rejectWithValue }) => {
-  const { accessToken, tokenType } = getState().auth;
-  if (!accessToken) return rejectWithValue('Not authenticated.');
-
-  try {
-    const response = await updateHabitLog(accessToken, logId, payload, tokenType ?? 'Bearer');
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error, 'Failed to update habit log.'));
-  }
-});
-
-export const submitProcessMissedHabitLogs = createAsyncThunk<
-  void,
-  ProcessMissedPayload | undefined,
-  { state: RootState; rejectValue: string }
->('habitLogs/processMissed', async (payload, { getState, rejectWithValue }) => {
-  const { accessToken, tokenType } = getState().auth;
-  if (!accessToken) return rejectWithValue('Not authenticated.');
-
-  try {
-    await processMissedHabitLogs(accessToken, payload ?? {}, tokenType ?? 'Bearer');
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error, 'Failed to process missed logs.'));
-  }
-});
+// ── Slice ───────────────────────────────────────────────────────────
 
 const habitLogsSlice = createSlice({
   name: 'habitLogs',
   initialState,
   reducers: {
-    resetHabitLogs: () => initialState,
-    clearHabitLogsError(state) {
-      state.error = null;
+    clearMutationError(state) {
       state.mutationError = null;
     },
+    resetHabitLogs: () => initialState,
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchHabitLogs.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
+      // fetchTodayLogs
+      .addCase(fetchTodayLogs.pending, (state) => {
+        state.fetchStatus = 'loading';
+        state.fetchError = null;
       })
-      .addCase(fetchHabitLogs.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.items = action.payload;
+      .addCase(fetchTodayLogs.fulfilled, (state, action) => {
+        state.fetchStatus = 'succeeded';
+        // Index by habitId for O(1) lookup
+        const map: Record<string, HabitLog> = {};
+        for (const log of action.payload) {
+          map[log.habitId] = log;
+        }
+        state.todayLogs = map;
       })
-      .addCase(fetchHabitLogs.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload ?? 'Something went wrong.';
-      });
+      .addCase(fetchTodayLogs.rejected, (state, action) => {
+        state.fetchStatus = 'failed';
+        state.fetchError = action.payload ?? 'Error.';
+      })
 
-    builder
-      .addCase(submitHabitCheckIn.pending, (state) => {
-        state.mutationStatus = 'loading';
+      // checkIn
+      .addCase(checkIn.pending, (state, action) => {
+        state.mutatingIds[action.meta.arg.habitId] = true;
         state.mutationError = null;
       })
-      .addCase(submitHabitCheckIn.fulfilled, (state, action) => {
-        state.mutationStatus = 'succeeded';
-        upsertLog(state.items, action.payload);
+      .addCase(checkIn.fulfilled, (state, action) => {
+        const log = action.payload;
+        state.mutatingIds[log.habitId] = false;
+        state.todayLogs[log.habitId] = log;
       })
-      .addCase(submitHabitCheckIn.rejected, (state, action) => {
-        state.mutationStatus = 'failed';
-        state.mutationError = action.payload ?? 'Something went wrong.';
+      .addCase(checkIn.rejected, (state, action) => {
+        state.mutatingIds[action.meta.arg.habitId] = false;
+        state.mutationError = action.payload ?? 'Check-in failed.';
       })
-      .addCase(submitHabitSkip.pending, (state) => {
-        state.mutationStatus = 'loading';
+
+      // skipToday
+      .addCase(skipToday.pending, (state, action) => {
+        state.mutatingIds[action.meta.arg.habitId] = true;
         state.mutationError = null;
       })
-      .addCase(submitHabitSkip.fulfilled, (state, action) => {
-        state.mutationStatus = 'succeeded';
-        upsertLog(state.items, action.payload);
+      .addCase(skipToday.fulfilled, (state, action) => {
+        const log = action.payload;
+        state.mutatingIds[log.habitId] = false;
+        state.todayLogs[log.habitId] = log;
       })
-      .addCase(submitHabitSkip.rejected, (state, action) => {
-        state.mutationStatus = 'failed';
-        state.mutationError = action.payload ?? 'Something went wrong.';
-      })
-      .addCase(submitHabitLogUpdate.pending, (state) => {
-        state.mutationStatus = 'loading';
-        state.mutationError = null;
-      })
-      .addCase(submitHabitLogUpdate.fulfilled, (state, action) => {
-        state.mutationStatus = 'succeeded';
-        upsertLog(state.items, action.payload);
-      })
-      .addCase(submitHabitLogUpdate.rejected, (state, action) => {
-        state.mutationStatus = 'failed';
-        state.mutationError = action.payload ?? 'Something went wrong.';
-      })
-      .addCase(submitProcessMissedHabitLogs.rejected, (state, action) => {
-        state.mutationStatus = 'failed';
-        state.mutationError = action.payload ?? 'Something went wrong.';
+      .addCase(skipToday.rejected, (state, action) => {
+        state.mutatingIds[action.meta.arg.habitId] = false;
+        state.mutationError = action.payload ?? 'Skip failed.';
       });
   },
 });
 
-export const { resetHabitLogs, clearHabitLogsError } = habitLogsSlice.actions;
+export const { clearMutationError, resetHabitLogs } = habitLogsSlice.actions;
 export default habitLogsSlice.reducer;

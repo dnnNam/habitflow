@@ -1,12 +1,15 @@
-export type HabitLogStatus = 'pending' | 'partial' | 'completed' | 'skipped' | 'missed';
+
+
+export type HabitLogStatus = 'completed' | 'partial' | 'pending' | 'skipped' | 'missed';
 
 export interface HabitLog {
   id: string;
   habitId: string;
-  logDate: string;
-  progressValue: number;
-  note?: string | null;
+  userId?: string;
+  logDate: string;           // 'YYYY-MM-DD'
   status: HabitLogStatus;
+  progressValue?: number | null;
+  note?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
