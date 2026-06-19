@@ -5,12 +5,14 @@ import authReducer from '../features/auth/authSlice';
 import habitsReducer from '../features/habits/habitsSlice';
 import createHabitReducer from '../features/createHabit/createHabitSlice';
 import remindersReducer from '../features/reminders/remindersSlice';
+import habitLogsReducer from '../features/habitLogs/habitLogsSlice';
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     habits: habitsReducer,
     createHabit: createHabitReducer,
     reminders: remindersReducer,
+    habitLogs: habitLogsReducer
   },
 });
 
