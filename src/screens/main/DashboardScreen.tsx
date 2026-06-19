@@ -18,6 +18,16 @@ import type { MainStackParamList } from '../../navigation/MainNavigator';
 import { colors, fontSizes, fontWeights, radius, spacing } from '../../theme';
 import { selectHabits, selectHabitsError, selectHabitsStatus } from '../../features/habits/HabitSelector';
 import { fetchHabits } from '../../features/habits/habitsSlice';
+import {
+  fetchHabitLogs,
+  submitHabitCheckIn,
+  submitHabitSkip,
+  submitProcessMissedHabitLogs,
+} from '../../features/habitLogs/habitLogsSlice';
+import {
+  selectHabitLogsMutationStatus,
+  selectTodayHabitLogByHabitId,
+} from '../../features/habitLogs/habitLogsSelector';
 
 type DashboardNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Dashboard'>;
 
@@ -37,6 +47,10 @@ const week: WeekBar[] = [
   { day: 'S', value: 0 },
 ] as const;
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function DashboardScreen() {
   const navigation = useNavigation<DashboardNavigationProp>();
   const dispatch = useAppDispatch();
@@ -50,6 +64,8 @@ export default function DashboardScreen() {
   const habits = useAppSelector(selectHabits);
   const habitsStatus = useAppSelector(selectHabitsStatus);
   const habitsError = useAppSelector(selectHabitsError);
+  const habitLogMutationStatus = useAppSelector(selectHabitLogsMutationStatus);
+  const today = todayISO();
 
   // Dùng ref để tránh redirect nhiều lần khi re-render
   const hasRedirected = useRef(false);
@@ -68,6 +84,13 @@ export default function DashboardScreen() {
     }
   }, [accessToken, dispatch, habitsStatus]);
 
+  useEffect(() => {
+    if (accessToken) {
+      dispatch(submitProcessMissedHabitLogs({ processUntilDate: today }));
+      dispatch(fetchHabitLogs({ date: today }));
+    }
+  }, [accessToken, dispatch, today]);
+
   // 3. Sau khi fetch xong → redirect nếu không có habits
   useEffect(() => {
     if (habitsStatus !== 'succeeded') return;
@@ -83,6 +106,21 @@ export default function DashboardScreen() {
 
   const displayName = user?.fullName ?? user?.name ?? 'HabitFlow user';
   const initials = getInitials(displayName);
+  const isUpdatingLog = habitLogMutationStatus === 'loading';
+
+  const handleCheckIn = (habitId: string) => {
+    dispatch(submitHabitCheckIn({ habitId, logDate: today, progressValue: 1 }))
+      .unwrap()
+      .then(() => dispatch(fetchHabitLogs({ date: today })))
+      .catch(() => undefined);
+  };
+
+  const handleSkip = (habitId: string) => {
+    dispatch(submitHabitSkip({ habitId, payload: { logDate: today } }))
+      .unwrap()
+      .then(() => dispatch(fetchHabitLogs({ date: today })))
+      .catch(() => undefined);
+  };
 
   // ── Loading state ─────────────────────────────────────────────────
   if (habitsStatus === 'idle' || habitsStatus === 'loading') {
@@ -145,6 +183,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
           <BottomNavBar
             activeTab="Today"
+            onStatsPress={() => navigation.navigate('Statistics')}
             onProfilePress={() => {
               dispatch(fetchProfile());
               navigation.navigate('Profile');
@@ -204,9 +243,14 @@ export default function DashboardScreen() {
         {habits.slice(0, 3).map((habit) => (
           <HabitCard
             key={habit.id}
+            habitId={habit.id}
             title={habit.name}
             meta={habit.goalType}
             status={habit.status}
+            today={today}
+            disabled={isUpdatingLog}
+            onCheckIn={handleCheckIn}
+            onSkip={handleSkip}
           />
         ))}
       </View>
@@ -292,34 +336,70 @@ function ProgressRing({ progress }: { progress: number }) {
 }
 
 function HabitCard({
+  habitId,
   title,
   meta,
   status,
+  today,
+  disabled,
+  onCheckIn,
+  onSkip,
 }: {
+  habitId: string;
   title: string;
   meta: string;
   status: string;
+  today: string;
+  disabled: boolean;
+  onCheckIn: (habitId: string) => void;
+  onSkip: (habitId: string) => void;
 }) {
   const done = status === 'archived';
   const active = status === 'active';
+  const log = useAppSelector((state) => selectTodayHabitLogByHabitId(state, habitId, today));
+  const isCompleted = log?.status === 'completed';
+  const isSkipped = log?.status === 'skipped';
 
   return (
-    <GlassCard style={[styles.habitCard, done && styles.doneCard, active && styles.activeCard]}>
+    <GlassCard style={[styles.habitCard, (done || isCompleted) && styles.doneCard, active && styles.activeCard]}>
       <View style={styles.habitTop}>
-        <View style={[styles.habitIcon, done && styles.doneIcon, active && styles.activeIcon]}>
+        <View style={[styles.habitIcon, (done || isCompleted) && styles.doneIcon, active && styles.activeIcon]}>
           <MaterialIcons
-            name="track-changes"
+            name={isSkipped ? 'remove-circle-outline' : isCompleted ? 'check-circle' : 'track-changes'}
             size={18}
-            color={done ? colors.tertiary : active ? colors.primary : colors.onSurfaceVariant}
+            color={(done || isCompleted) ? colors.tertiary : active ? colors.primary : colors.onSurfaceVariant}
           />
         </View>
-        <View style={[styles.checkCircle, done && styles.checkedCircle]}>
-          {done && <MaterialIcons name="check" size={14} color={colors.surfaceContainerLowest} />}
+        <View style={[styles.checkCircle, (done || isCompleted) && styles.checkedCircle]}>
+          {(done || isCompleted) && <MaterialIcons name="check" size={14} color={colors.surfaceContainerLowest} />}
         </View>
       </View>
       <View>
         <Text style={styles.habitTitle} numberOfLines={1}>{title}</Text>
-        <Text style={[styles.habitMeta, active && styles.activeMeta]}>{meta}</Text>
+        <Text style={[styles.habitMeta, active && styles.activeMeta]}>
+          {log?.status ?? meta}
+        </Text>
+      </View>
+      <View style={styles.logActionRow}>
+        <TouchableOpacity
+          activeOpacity={0.78}
+          disabled={disabled || isCompleted}
+          onPress={() => onCheckIn(habitId)}
+          style={[styles.logAction, isCompleted && styles.logActionDone]}
+        >
+          <MaterialIcons name="done" size={14} color={isCompleted ? colors.surfaceContainerLowest : colors.tertiary} />
+          <Text style={[styles.logActionText, isCompleted && styles.logActionDoneText]}>
+            Done
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.78}
+          disabled={disabled || isSkipped}
+          onPress={() => onSkip(habitId)}
+          style={styles.skipAction}
+        >
+          <MaterialIcons name="skip-next" size={14} color={colors.onSurfaceVariant} />
+        </TouchableOpacity>
       </View>
     </GlassCard>
   );
@@ -501,7 +581,7 @@ const styles = StyleSheet.create({
   },
   habitCard: {
     flex: 1,
-    minHeight: 132,
+    minHeight: 160,
     padding: spacing.md,
     justifyContent: 'space-between',
   },
@@ -558,6 +638,42 @@ const styles = StyleSheet.create({
   },
   activeMeta: {
     color: colors.primary,
+  },
+  logActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  logAction: {
+    flex: 1,
+    minHeight: 30,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(78,222,163,0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  logActionDone: {
+    backgroundColor: colors.tertiary,
+  },
+  logActionText: {
+    color: colors.tertiary,
+    fontSize: 10,
+    fontWeight: fontWeights.bold,
+    textTransform: 'uppercase',
+  },
+  logActionDoneText: {
+    color: colors.surfaceContainerLowest,
+  },
+  skipAction: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Chart

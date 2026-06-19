@@ -13,6 +13,18 @@ export const API_ENDPOINTS = {
   habits: {
     list: '/habits',
   },
+  habitLogs: {
+    list: '/habit-logs',
+    checkIn: '/habit-logs/check-in',
+    skip: (habitId: string) => `/habit-logs/${habitId}/skip`,
+    update: (logId: string) => `/habit-logs/${logId}`,
+    processMissed: '/habit-logs/process-missed',
+  },
+  statistics: {
+    overview: '/statistics/overview',
+    period: '/statistics/period',
+    habit: (habitId: string) => `/statistics/habits/${habitId}`,
+  },
 } as const;
 
 export interface ApiRequestOptions extends AxiosRequestConfig {
@@ -64,6 +76,18 @@ export function apiPost<TResponse, TPayload>(
   return apiRequest<TResponse>(endpoint, {
     ...options,
     method: 'POST',
+    data: payload,
+  });
+}
+
+export function apiPatch<TResponse, TPayload>(
+  endpoint: string,
+  payload: TPayload,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, {
+    ...options,
+    method: 'PATCH',
     data: payload,
   });
 }
