@@ -1,3 +1,6 @@
+// src/features/auth/authSlice.ts
+// Thêm dispatch(resetHabits()) khi logout để clear habits khỏi store
+
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getProfile, loginUser, registerUser } from '../../services/authApi';
 import type { AuthResponseData, LoginPayload, RegisterPayload } from '../../services/authApi';
@@ -82,6 +85,10 @@ const authSlice = createSlice({
       state.tokenType = null;
       state.error = null;
       state.profileStatus = 'idle';
+      // NOTE: habits sẽ được reset riêng bằng resetHabits action
+      // Gọi cả hai action ở nơi dispatch logout:
+      //   dispatch(logout());
+      //   dispatch(resetHabits());
     },
 
     completeOnboarding: (state) => {
@@ -146,7 +153,6 @@ function getAuthErrorMessage(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
-
   return 'Authentication failed. Please try again.';
 }
 

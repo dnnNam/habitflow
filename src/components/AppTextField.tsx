@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, fontSizes, fontWeights, radius, spacing } from '../theme';
 
 interface AppTextFieldProps extends TextInputProps {
+  error?: string;
   label?: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   showPasswordToggle?: boolean;
@@ -11,6 +12,7 @@ interface AppTextFieldProps extends TextInputProps {
 
 export default function AppTextField({
   label,
+  error,
   icon,
   style,
   secureTextEntry,
@@ -23,8 +25,8 @@ export default function AppTextField({
   return (
     <View style={styles.field}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.inputWrapper}>
-        <MaterialIcons name={icon} size={20} color={colors.outline} style={styles.icon} />
+      <View style={[styles.inputWrapper, error && styles.inputWrapperError]}>
+        <MaterialIcons name={icon} size={20} color={error ? colors.error : colors.outline} style={styles.icon} />
         <TextInput
           {...inputProps}
           placeholderTextColor={colors.outlineVariant}
@@ -36,12 +38,13 @@ export default function AppTextField({
           <MaterialIcons
             name={isPasswordVisible ? 'visibility-off' : 'visibility'}
             size={21}
-            color={colors.outline}
+            color={error ? colors.error : colors.outline}
             style={styles.trailingIcon}
             onPress={() => setIsPasswordVisible((current) => !current)}
           />
         ) : null}
       </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -65,6 +68,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  inputWrapperError: {
+    borderColor: 'rgba(255,180,171,0.75)',
+  },
   icon: {
     marginLeft: spacing.md,
     marginRight: spacing.sm,
@@ -79,5 +85,12 @@ const styles = StyleSheet.create({
   trailingIcon: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: fontSizes.label,
+    fontWeight: fontWeights.semibold,
+    lineHeight: 18,
+    paddingLeft: spacing.xs,
   },
 });

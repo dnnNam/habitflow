@@ -1,5 +1,8 @@
-export const API_TIMEOUT_MS = 15000;
-export const API_BASE_URL = 'https://habitzen-u21c.onrender.com/api/v1';
+import axios from 'axios';
+import type { AxiosError, AxiosRequestConfig } from 'axios';
+
+export const API_TIMEOUT_MS = 30000;
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export const API_ENDPOINTS = {
   auth: {
@@ -7,42 +10,86 @@ export const API_ENDPOINTS = {
     register: '/auth/register',
     me: '/auth/me',
   },
+  habits: {
+    list: '/habits',
+  },
+  habitLogs: {
+    list: '/habit-logs',
+    checkIn: '/habit-logs/check-in',
+    skip: (habitId: string) => `/habit-logs/${habitId}/skip`,
+    update: (logId: string) => `/habit-logs/${logId}`,
+    processMissed: '/habit-logs/process-missed',
+  },
+  statistics: {
+    overview: '/statistics/overview',
+    period: '/statistics/period',
+    habit: (habitId: string) => `/statistics/habits/${habitId}`,
+  },
 } as const;
 
-export interface ApiRequestOptions extends RequestInit {
+export interface ApiRequestOptions extends AxiosRequestConfig {
   timeoutMs?: number;
 }
+
+interface ApiErrorResponse {
+  message?: string | string[];
+  error?: string;
+}
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT_MS,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 export async function apiRequest<TResponse>(
   endpoint: string,
   options: ApiRequestOptions = {},
 ): Promise<TResponse> {
-  const { timeoutMs = API_TIMEOUT_MS, ...requestOptions } = options;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const url = endpoint.startsWith('http')
-    ? endpoint
-    : `${API_BASE_URL}${endpoint}`;
-
   try {
-    const response = await fetch(url, {
+    const { timeoutMs = API_TIMEOUT_MS, ...requestOptions } = options;
+    const response = await apiClient.request<TResponse>({
+      url: endpoint,
+      timeout: timeoutMs,
       ...requestOptions,
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...requestOptions.headers,
-      },
     });
-
-    if (!response.ok) {
-      const message = await getErrorMessage(response);
-      throw new Error(message);
-    }
-
-    return response.json() as Promise<TResponse>;
-  } finally {
-    clearTimeout(timeoutId);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
   }
+}
+
+export function apiGet<TResponse>(
+  endpoint: string,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, { ...options, method: 'GET' });
+}
+
+export function apiPost<TResponse, TPayload>(
+  endpoint: string,
+  payload: TPayload,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, {
+    ...options,
+    method: 'POST',
+    data: payload,
+  });
+}
+
+export function apiPatch<TResponse, TPayload>(
+  endpoint: string,
+  payload: TPayload,
+  options?: ApiRequestOptions,
+) {
+  return apiRequest<TResponse>(endpoint, {
+    ...options,
+    method: 'PATCH',
+    data: payload,
+  });
 }
 
 export function createBearerAuthHeader(accessToken: string, tokenType = 'Bearer') {
@@ -51,20 +98,31 @@ export function createBearerAuthHeader(accessToken: string, tokenType = 'Bearer'
   };
 }
 
-async function getErrorMessage(response: Response) {
-  try {
-    const body = await response.json();
+function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    const data = axiosError.response?.data;
 
-    if (typeof body?.message === 'string') {
-      return body.message;
+    if (data?.message) {
+      // NestJS class-validator trả message: string[]
+      if (Array.isArray(data.message)) return data.message.join(', ');
+      if (typeof data.message === 'string') return data.message;
     }
 
-    if (typeof body?.error === 'string') {
-      return body.error;
+    if (data?.error && typeof data.error === 'string') {
+      return data.error;
     }
-  } catch {
-    return `Request failed with status ${response.status}`;
+
+    if (axiosError.response?.status) {
+      return `Request failed with status ${axiosError.response.status}`;
+    }
+
+    return axiosError.message;
   }
 
-  return `Request failed with status ${response.status}`;
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Request failed. Please try again.';
 }

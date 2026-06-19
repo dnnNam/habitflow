@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiRequest, createBearerAuthHeader } from './api';
+import { API_ENDPOINTS, apiGet, apiPost, createBearerAuthHeader } from './api';
 import type { User } from '../types/user';
 
 export interface LoginPayload {
@@ -29,22 +29,15 @@ export interface ProfileResponse {
 }
 
 export function loginUser(payload: LoginPayload) {
-  return apiRequest<AuthResponse>(API_ENDPOINTS.auth.login, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  return apiPost<AuthResponse, LoginPayload>(API_ENDPOINTS.auth.login, payload);
 }
 
 export function registerUser(payload: RegisterPayload) {
-  return apiRequest<AuthResponse>(API_ENDPOINTS.auth.register, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  return apiPost<AuthResponse, RegisterPayload>(API_ENDPOINTS.auth.register, payload);
 }
 
 export function getProfile(accessToken: string, tokenType = 'Bearer') {
-  return apiRequest<ProfileResponse>(API_ENDPOINTS.auth.me, {
-    method: 'GET',
+  return apiGet<ProfileResponse>(API_ENDPOINTS.auth.me, {
     headers: createBearerAuthHeader(accessToken, tokenType),
   });
 }

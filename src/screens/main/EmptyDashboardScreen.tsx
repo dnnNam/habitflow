@@ -1,3 +1,5 @@
+// src/screens/main/EmptyDashboardScreen.tsx
+
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +22,7 @@ export default function EmptyDashboardScreen() {
       bottomOverlay={(
         <BottomNavBar
           activeTab="Today"
+          onStatsPress={() => navigation.navigate('Statistics')}
           onProfilePress={() => navigation.navigate('Profile')}
         />
       )}
@@ -50,7 +53,13 @@ export default function EmptyDashboardScreen() {
         </Text>
       </GlassCard>
 
-      <GradientButton title="Add Your First Habit" icon="add" onPress={() => navigation.navigate('Dashboard')} style={styles.button} />
+
+      <GradientButton
+        title="Add Your First Habit"
+        icon="add"
+        onPress={() => navigation.navigate('CreateHabit')}
+        style={styles.button}
+      />
     </Screen>
   );
 }

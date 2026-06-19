@@ -10,6 +10,7 @@ type NavItem = {
 interface BottomNavBarProps {
   activeTab?: 'Today' | 'Stats' | 'Social' | 'Profile';
   onTodayPress?: () => void;
+  onStatsPress?: () => void;
   onProfilePress?: () => void;
 }
 
@@ -23,6 +24,7 @@ const items: NavItem[] = [
 export default function BottomNavBar({
   activeTab = 'Today',
   onTodayPress,
+  onStatsPress,
   onProfilePress,
 }: BottomNavBarProps) {
   return (
@@ -35,7 +37,7 @@ export default function BottomNavBar({
             activeOpacity={0.75}
             key={item.label}
             style={styles.navItem}
-            onPress={getNavPressHandler(item.label, onTodayPress, onProfilePress)}
+            onPress={getNavPressHandler(item.label, onTodayPress, onStatsPress, onProfilePress)}
           >
             <MaterialIcons
               name={item.icon}
@@ -53,6 +55,7 @@ export default function BottomNavBar({
 function getNavPressHandler(
   label: string,
   onTodayPress?: () => void,
+  onStatsPress?: () => void,
   onProfilePress?: () => void,
 ) {
   if (label === 'Today') {
@@ -61,6 +64,10 @@ function getNavPressHandler(
 
   if (label === 'Profile') {
     return onProfilePress;
+  }
+
+  if (label === 'Stats') {
+    return onStatsPress;
   }
 
   return undefined;
