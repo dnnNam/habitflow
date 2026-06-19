@@ -1,4 +1,4 @@
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 
 export const selectStatisticsOverview = (state: RootState) => state.statistics.overview;
 export const selectPeriodStatistics = (state: RootState) => state.statistics.period;

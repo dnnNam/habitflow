@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import GlassCard from '../../../components/GlassCard';
 import Screen from '../../../components/Screen';
-import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../../state/hooks';
 import { resetCreateHabit } from '../../../features/createHabit/createHabitSlice';
 import {
   selectCreatedHabit,

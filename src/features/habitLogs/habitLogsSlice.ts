@@ -14,7 +14,7 @@ import type {
   UpdateHabitLogPayload,
 } from '../../services/habitLogsApi';
 import type { HabitLog } from '../../types/habitLog';
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 
 interface HabitLogsState {
   items: HabitLog[];

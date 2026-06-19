@@ -17,7 +17,7 @@ import GradientButton from '../../../components/GradientButton';
 import Screen from '../../../components/Screen';
 import AppTextField from '../../../components/AppTextField';
 import GlassCard from '../../../components/GlassCard';
-import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../../state/hooks';
 import {
   setStep,
   submitCreateCategory,

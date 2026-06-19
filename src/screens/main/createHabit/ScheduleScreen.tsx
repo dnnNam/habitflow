@@ -11,7 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import GlassCard from '../../../components/GlassCard';
 import GradientButton from '../../../components/GradientButton';
 import Screen from '../../../components/Screen';
-import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../../state/hooks';
 import {
   setStep,
   submitCreateHabit,

@@ -9,7 +9,7 @@
 // Add CreateHabit to MainNavigator and add createHabitReducer to store.
 
 import { useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../../state/hooks';
 import { resetCreateHabit } from '../../../features/createHabit/createHabitSlice';
 import { selectCreateHabitStep } from '../../../features/createHabit/createHabitSelectors';
 import NameCategoryScreen from './NameCategoryScreen';

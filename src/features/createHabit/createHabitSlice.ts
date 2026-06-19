@@ -17,7 +17,7 @@ import { createCategory, CreateCategoryPayload } from '../../services/categories
 import { createHabit, CreateHabitPayload } from '../../services/habitsApi';
 import type { Category } from '../../types/category';
 import type { Habit, GoalType, RepeatType, RepeatConfig } from '../../types/habit';
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 
 // ── Draft state ───────────────────────────────────────────────────────────────
 

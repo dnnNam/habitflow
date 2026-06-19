@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BottomNavBar from '../../components/BottomNavBar';
 import GlassCard from '../../components/GlassCard';
 import Screen from '../../components/Screen';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fetchProfile, logout } from '../../features/auth/authSlice';
 import { resetHabits } from '../../features/habits/habitsSlice';
 import { selectAccessToken, selectCurrentUser, selectProfileStatus } from '../../features/auth/authSelector';

@@ -9,7 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import BottomNavBar from '../../components/BottomNavBar';
 import GlassCard from '../../components/GlassCard';
 import Screen from '../../components/Screen';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fetchProfile } from '../../features/auth/authSlice';
 
 import { selectAccessToken, selectCurrentUser, selectProfileStatus } from '../../features/auth/authSelector';
