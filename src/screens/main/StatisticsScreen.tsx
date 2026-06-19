@@ -99,6 +99,7 @@ export default function StatisticsScreen() {
         <BottomNavBar
           activeTab="Stats"
           onTodayPress={() => navigation.navigate('Dashboard')}
+          onStatsPress={handleRetry}
           onProfilePress={() => navigation.navigate('Profile')}
         />
       )}

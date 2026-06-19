@@ -225,6 +225,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
           <BottomNavBar
             activeTab="Today"
+            onStatsPress={() => navigation.navigate('Statistics')}
             onProfilePress={() => { dispatch(fetchProfile()); navigation.navigate('Profile'); }}
           />
         </>
