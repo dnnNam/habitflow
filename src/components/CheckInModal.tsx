@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useAppDispatch, useAppSelector } from '../state/hooks';
 import { checkIn, skipToday } from '../features/habitLogs/habitLogsSlice';
 import { selectTodayLogForHabit, selectIsHabitMutating } from '../features/habitLogs/habitLogsSelectors';
 import { colors, fontSizes, fontWeights, gradients, radius, spacing } from '../theme';

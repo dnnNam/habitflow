@@ -6,7 +6,7 @@
 
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 import { HabitLog } from '../../types/habitLog';
 import { checkInHabit, CheckInPayload, getHabitLogs, skipHabit } from '../../services/habitLogsApi';
 

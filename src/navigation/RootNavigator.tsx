@@ -1,4 +1,4 @@
-import { useAppSelector } from '../app/hooks';
+import { useAppSelector } from '../state/hooks';
 import { selectHasSeenOnboarding, selectIsLoggedIn } from '../features/auth/authSelector';
 import OnboardingNavigator from './OnboardingNavigator';
 import AuthNavigator from './AuthNavigator';

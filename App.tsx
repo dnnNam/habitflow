@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { DarkTheme } from '@react-navigation/native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { store } from './src/app/store';
+import { store } from './src/state/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 

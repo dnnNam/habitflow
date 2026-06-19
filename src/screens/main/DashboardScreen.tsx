@@ -14,7 +14,7 @@ import Screen from '../../components/Screen';
 import ReminderModal from '../../components/ReminderModal';
 import CheckInModal from '../../components/CheckInModal';           // <-- NEW
 import EmptyDashboardScreen from './EmptyDashboardScreen';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fetchProfile } from '../../features/auth/authSlice';
 import { selectAccessToken, selectCurrentUser, selectProfileStatus } from '../../features/auth/authSelector';
 import type { MainStackParamList } from '../../navigation/MainNavigator';
@@ -225,6 +225,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
           <BottomNavBar
             activeTab="Today"
+            onStatsPress={() => navigation.navigate('Statistics')}
             onProfilePress={() => { dispatch(fetchProfile()); navigation.navigate('Profile'); }}
           />
         </>

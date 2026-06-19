@@ -10,9 +10,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BottomNavBar from '../../components/BottomNavBar';
 import GlassCard from '../../components/GlassCard';
 import Screen from '../../components/Screen';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fetchProfile, logout } from '../../features/auth/authSlice';
 import { resetHabits } from '../../features/habits/habitsSlice';
+import { resetHabitLogs } from '../../features/habitLogs/habitLogsSlice';
+import { resetReminders } from '../../features/reminders/remindersSlice';
+import { resetStatistics } from '../../features/statistics/statisticsSlice';
 import { selectAccessToken, selectCurrentUser, selectProfileStatus } from '../../features/auth/authSelector';
 import type { MainStackParamList } from '../../navigation/MainNavigator';
 import { colors, fontSizes, fontWeights, gradients, radius, spacing } from '../../theme';
@@ -52,6 +55,9 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     dispatch(logout());
     dispatch(resetHabits());
+    dispatch(resetHabitLogs());
+    dispatch(resetReminders());
+    dispatch(resetStatistics());
   };
 
   return (
@@ -60,6 +66,7 @@ export default function ProfileScreen() {
         <BottomNavBar
           activeTab="Profile"
           onTodayPress={() => navigation.navigate('Dashboard')}
+          onStatsPress={() => navigation.navigate('Statistics')}
           onProfilePress={() => dispatch(fetchProfile())}
         />
       )}

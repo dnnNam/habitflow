@@ -4,7 +4,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getHabits, updateHabitStatus } from '../../services/habitsApi';
 import type { GetHabitsParams } from '../../services/habitsApi';
 import type { Habit, HabitStatus } from '../../types/habit';
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 
 interface HabitsState {
   items: Habit[];

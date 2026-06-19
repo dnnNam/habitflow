@@ -16,10 +16,27 @@ export const API_ENDPOINTS = {
     status: (id: string) => `/habits/${id}/status`,
     schedule: (id: string) => `/habits/${id}/schedule`,
   },
+  habitLogs: {
+    list: '/habit-logs',
+    checkIn: '/habit-logs/check-in',
+    skip: (habitId: string) => `/habit-logs/${habitId}/skip`,
+    update: (logId: string) => `/habit-logs/${logId}`,
+    processMissed: '/habit-logs/process-missed',
+  },
+  statistics: {
+    overview: '/statistics/overview',
+    period: '/statistics/period',
+    habit: (habitId: string) => `/statistics/habits/${habitId}`,
+  },
 } as const;
 
 export interface ApiRequestOptions extends AxiosRequestConfig {
   timeoutMs?: number;
+}
+
+interface ApiErrorResponse {
+  message?: string | string[];
+  error?: string;
 }
 
 export const apiClient = axios.create({
@@ -66,44 +83,6 @@ export function apiPost<TResponse, TPayload>(
   });
 }
 
-export function createBearerAuthHeader(accessToken: string, tokenType = 'Bearer') {
-  return {
-    Authorization: `${tokenType} ${accessToken}`,
-  };
-}
-
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
-    const data = axiosError.response?.data;
-
-    console.log('[api] axios error status:', axiosError.response?.status);
-    console.log('[api] axios error data:', data);
-
-    if (data?.message) {
-      // NestJS class-validator trả message: string[]
-      if (Array.isArray(data.message)) return data.message.join(', ');
-      if (typeof data.message === 'string') return data.message;
-    }
-
-    if (data?.error && typeof data.error === 'string') {
-      return data.error;
-    }
-
-    if (axiosError.response?.status) {
-      return `Request failed with status ${axiosError.response.status}`;
-    }
-
-    return axiosError.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Request failed. Please try again.';
-}
-
 export function apiPatch<TResponse, TPayload>(
   endpoint: string,
   payload: TPayload,
@@ -127,10 +106,45 @@ export function apiPut<TResponse, TPayload>(
     data: payload,
   });
 }
- 
+
 export function apiDelete<TResponse>(
   endpoint: string,
   options?: ApiRequestOptions,
 ) {
   return apiRequest<TResponse>(endpoint, { ...options, method: 'DELETE' });
+}
+
+export function createBearerAuthHeader(accessToken: string, tokenType = 'Bearer') {
+  return {
+    Authorization: `${tokenType} ${accessToken}`,
+  };
+}
+
+function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    const data = axiosError.response?.data;
+
+    if (data?.message) {
+      // NestJS class-validator trả message: string[]
+      if (Array.isArray(data.message)) return data.message.join(', ');
+      if (typeof data.message === 'string') return data.message;
+    }
+
+    if (data?.error && typeof data.error === 'string') {
+      return data.error;
+    }
+
+    if (axiosError.response?.status) {
+      return `Request failed with status ${axiosError.response.status}`;
+    }
+
+    return axiosError.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Request failed. Please try again.';
 }

@@ -6,18 +6,17 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
-  Platform,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import GlassCard from './GlassCard';
 import GradientButton from './GradientButton';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useAppDispatch, useAppSelector } from '../state/hooks';
 import {
   addReminder,
   editReminder,
@@ -63,8 +62,9 @@ export default function ReminderModal({ visible, habitId, habitName, onClose }: 
   const mutationStatus = useAppSelector(selectRemindersMutationStatus);
   const mutationError = useAppSelector(selectRemindersMutationError);
  
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerDate, setPickerDate] = useState(new Date());
+  const [isAddingTime, setIsAddingTime] = useState(false);
+  const [remindAtInput, setRemindAtInput] = useState('');
+  const [timeInputError, setTimeInputError] = useState('');
  
   const isMutating = mutationStatus === 'loading';
   const isLoadingList = status === 'idle' || status === 'loading';
@@ -77,31 +77,35 @@ export default function ReminderModal({ visible, habitId, habitName, onClose }: 
  
   const handleClose = () => {
     dispatch(clearMutationError());
-    setShowPicker(false);
+    setIsAddingTime(false);
+    setRemindAtInput('');
+    setTimeInputError('');
     onClose();
   };
  
   const handleAddTime = () => {
-    setPickerDate(new Date());
-    setShowPicker(true);
+    setIsAddingTime(true);
+    setRemindAtInput('');
+    setTimeInputError('');
   };
  
-  const handlePickerChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowPicker(false);
-    }
-    if (event.type === 'dismissed' || !selectedDate) {
+  const handleCancelAddTime = () => {
+    setIsAddingTime(false);
+    setRemindAtInput('');
+    setTimeInputError('');
+  };
+
+  const handleConfirmAddTime = () => {
+    const normalized = normalizeTimeInput(remindAtInput);
+    if (!normalized) {
+      setTimeInputError('Use HH:mm format, for example 07:30.');
       return;
     }
-    const hh = String(selectedDate.getHours()).padStart(2, '0');
-    const mm = String(selectedDate.getMinutes()).padStart(2, '0');
-    const remindAt = `${hh}:${mm}`;
  
-    dispatch(addReminder({ habitId, payload: { remindAt, isEnabled: true } }));
- 
-    if (Platform.OS === 'ios') {
-      setShowPicker(false);
-    }
+    dispatch(addReminder({ habitId, payload: { remindAt: normalized, isEnabled: true } }));
+    setIsAddingTime(false);
+    setRemindAtInput('');
+    setTimeInputError('');
   };
  
   const handleToggle = (reminderId: string, nextEnabled: boolean) => {
@@ -196,6 +200,46 @@ export default function ReminderModal({ visible, habitId, habitName, onClose }: 
           )}
  
           {mutationError ? <Text style={styles.errorText}>{mutationError}</Text> : null}
+
+          {isAddingTime ? (
+            <GlassCard style={styles.timeInputCard}>
+              <View style={styles.timeInputHeader}>
+                <MaterialIcons name="schedule" size={18} color={colors.primary} />
+                <Text style={styles.timeInputTitle}>Reminder time</Text>
+              </View>
+              <TextInput
+                value={remindAtInput}
+                onChangeText={(value) => {
+                  setRemindAtInput(value);
+                  setTimeInputError('');
+                }}
+                placeholder="HH:mm"
+                placeholderTextColor={colors.outlineVariant}
+                keyboardType="numbers-and-punctuation"
+                style={styles.timeInput}
+                maxLength={5}
+              />
+              {timeInputError ? <Text style={styles.errorText}>{timeInputError}</Text> : null}
+              <View style={styles.timeInputActions}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={handleCancelAddTime}
+                  style={styles.cancelTimeBtn}
+                  disabled={isMutating}
+                >
+                  <Text style={styles.cancelTimeText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={handleConfirmAddTime}
+                  style={styles.saveTimeBtn}
+                  disabled={isMutating}
+                >
+                  <Text style={styles.saveTimeText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
+          ) : null}
  
           {/* Add time */}
           <GradientButton
@@ -203,22 +247,25 @@ export default function ReminderModal({ visible, habitId, habitName, onClose }: 
             icon="add-alarm"
             onPress={handleAddTime}
             loading={isMutating}
+            disabled={isAddingTime || isMutating}
             style={styles.addButton}
           />
- 
-          {showPicker && (
-            <DateTimePicker
-              value={pickerDate}
-              mode="time"
-              is24Hour={false}
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handlePickerChange}
-            />
-          )}
         </View>
       </View>
     </Modal>
   );
+}
+
+function normalizeTimeInput(value: string) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
  
 const styles = StyleSheet.create({
@@ -352,6 +399,63 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
     textAlign: 'center',
     marginBottom: spacing.lg,
+  },
+  timeInputCard: {
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  timeInputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  timeInputTitle: {
+    color: colors.onSurface,
+    fontSize: fontSizes.body,
+    fontWeight: fontWeights.bold,
+  },
+  timeInput: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(208,188,255,0.2)',
+    backgroundColor: colors.surfaceContainerHigh,
+    color: colors.onSurface,
+    fontSize: fontSizes.title,
+    fontWeight: fontWeights.bold,
+    fontVariant: ['tabular-nums'],
+    paddingHorizontal: spacing.lg,
+  },
+  timeInputActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+  },
+  cancelTimeBtn: {
+    minHeight: 40,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  cancelTimeText: {
+    color: colors.onSurfaceVariant,
+    fontSize: fontSizes.label,
+    fontWeight: fontWeights.bold,
+  },
+  saveTimeBtn: {
+    minHeight: 40,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryContainer,
+  },
+  saveTimeText: {
+    color: colors.white,
+    fontSize: fontSizes.label,
+    fontWeight: fontWeights.bold,
   },
   addButton: {
     marginTop: spacing.sm,

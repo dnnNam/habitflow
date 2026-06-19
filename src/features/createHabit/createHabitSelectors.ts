@@ -1,6 +1,6 @@
 // src/features/createHabit/createHabitSelectors.ts
 
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 
 export const selectCreateHabitStep = (state: RootState) => state.createHabit.step;
 export const selectHabitDraft = (state: RootState) => state.createHabit.draft;

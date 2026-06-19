@@ -8,7 +8,7 @@ import BrandHeader from '../../components/BrandHeader';
 import GlassCard from '../../components/GlassCard';
 import GradientButton from '../../components/GradientButton';
 import Screen from '../../components/Screen';
-import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { clearAuthError, fetchProfile, login } from '../../features/auth/authSlice';
 import { selectAuthError, selectAuthIsLoading } from '../../features/auth/authSelector';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';

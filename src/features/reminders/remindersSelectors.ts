@@ -1,4 +1,4 @@
-import { RootState } from "../../app/store";
+import { RootState } from "../../state/store";
 import { Reminder } from "../../types/reminder";
 
  

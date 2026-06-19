@@ -6,7 +6,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 
 import type { Reminder } from '../../types/reminder';
-import type { RootState } from '../../app/store';
+import type { RootState } from '../../state/store';
 import { createReminder, CreateReminderPayload, deleteReminder, getHabitReminders, updateReminder, UpdateReminderPayload } from '../../services/reminderApi';
  
 interface ReminderListState {

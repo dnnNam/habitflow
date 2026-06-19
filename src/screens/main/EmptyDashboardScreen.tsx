@@ -22,6 +22,7 @@ export default function EmptyDashboardScreen() {
       bottomOverlay={(
         <BottomNavBar
           activeTab="Today"
+          onStatsPress={() => navigation.navigate('Statistics')}
           onProfilePress={() => navigation.navigate('Profile')}
         />
       )}
