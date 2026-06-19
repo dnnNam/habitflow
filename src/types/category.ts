@@ -1,10 +1,11 @@
-
 export interface Category {
   id: string;
+  userId?: string;
   name: string;
   icon: string;
   color: string;
-  isSystem?: boolean;
+  isDefault?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
 }
